@@ -1,5 +1,5 @@
 [package]
-name = "your_mom"
+name = "clink"
 version = "0.1.0"
 authors = ["Sergey Bargamon <sergey@bargamon.ru>"]
 edition = "2018"
