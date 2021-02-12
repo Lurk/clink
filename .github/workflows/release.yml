@@ -17,7 +17,7 @@ jobs:
           - os: macos-latest
             artifact_name: clink
             asset_name: clink-macos
-          -os: windows-latest
+          - os: windows-latest
             artifact_name: clink
             asset_name: clink-windows
     steps:
