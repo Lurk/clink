@@ -6,20 +6,29 @@ on:
 
 jobs:
   release:
-    name: release ${{ matrix.target }}
-    runs-on: ubuntu-latest
+    name: Build and Release
+    runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        target: [x86_64-pc-windows-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]
+        include:
+          - os: ubuntu-latest
+            artifact_name: clink
+            asset_name: clink-linux
+          - os: macos-latest
+            artifact_name: clink
+            asset_name: clink-macos
+          -os: windows-latest
+            artifact_name: clink
+            asset_name: clink-windows
     steps:
-      - uses: actions/checkout@master
-      - name: Dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get install libxcb-composite0-dev
-      - name: Compile and release
-        uses: Douile/rust-build.action@v0.1.26
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUSTTARGET: ${{ matrix.target }}
-          EXTRA_FILES: "README.md LICENSE"
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build project
+        run: cargo build --release --locked
+      - name: Upload binary to release
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.event.client_payload.new_version }}
