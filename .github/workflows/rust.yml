@@ -1,6 +1,6 @@
 name: Rust
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   Unix:
@@ -26,10 +26,8 @@ jobs:
       with:
           toolchain: stable    
     - name: Dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-            sudo apt-get install \
-            xorg-dev 
+        if: ${{ runner.os == 'Linux' }}
+        run: sudo apt-get install xorg-dev 
     - name: build
       uses: actions-rs/cargo@v1
       with:
