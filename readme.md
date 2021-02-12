@@ -1,6 +1,6 @@
 # clink
 
-Removes fbclid, utm_source, utm_campaign, utm_medium GET params from links in clipboard 
+Automatically removes fbclid, utm_source, utm_campaign, utm_medium GET params from links in clipboard 
 
 ## Your mom mode
 
