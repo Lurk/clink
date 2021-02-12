@@ -90,10 +90,10 @@ mod find_and_replace {
     }
 }
 
-pub fn find_and_replace(str: &String, mode: &Mode) -> String {
+pub fn find_and_replace(str: &str, mode: &Mode) -> String {
     let mut finder = LinkFinder::new();
     finder.kinds(&[LinkKind::Url]);
-    let mut res = str.clone();
+    let mut res = str.to_string();
     for link in finder.links(str) {
         let l = Url::parse(link.as_str()).unwrap();
 
@@ -110,7 +110,7 @@ pub fn find_and_replace(str: &String, mode: &Mode) -> String {
         res = res.replace(link.as_str(), l2.as_str());
     }
 
-    return res;
+    res
 }
 
 pub enum Mode {
@@ -120,23 +120,19 @@ pub enum Mode {
 
 fn process_query(query: url::form_urlencoded::Parse<'_>, mode: &Mode) -> Vec<(String, String)> {
     match mode {
-        Mode::Remove => {
-            return query
-                .filter(|p| !is_hit(&p.0))
-                .map(|p| (p.0.to_string(), p.1.to_string()))
-                .collect()
-        }
-        Mode::YourMom => {
-            return query
-                .map(|p| {
-                    if is_hit(&p.0) {
-                        (p.0.to_string(), "your_mom".to_string())
-                    } else {
-                        (p.0.to_string(), p.1.to_string())
-                    }
-                })
-                .collect();
-        }
+        Mode::Remove => query
+            .filter(|p| !is_hit(&p.0))
+            .map(|p| (p.0.to_string(), p.1.to_string()))
+            .collect(),
+        Mode::YourMom => query
+            .map(|p| {
+                if is_hit(&p.0) {
+                    (p.0.to_string(), "your_mom".to_string())
+                } else {
+                    (p.0.to_string(), p.1.to_string())
+                }
+            })
+            .collect(),
     }
 }
 

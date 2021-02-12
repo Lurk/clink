@@ -14,7 +14,7 @@ fn main() {
     let mut buff = "".to_string();
     let mode: Mode;
     match env::var("CLINK_MODE")
-        .unwrap_or("Remove".to_string())
+        .unwrap_or_else(|_| "Remove".to_string())
         .as_str()
     {
         "Remove" => mode = Mode::Remove,
