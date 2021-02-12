@@ -27,7 +27,7 @@ jobs:
           toolchain: stable    
     - name: Dependencies (Linux)
       if: runner.os == 'Linux'
-      run: sudo apt-get install xorg-dev libxcb-render0-dev
+      run: sudo apt-get install xorg-dev libxcb-render0-dev libxcb-composite0-dev
     - name: build
       uses: actions-rs/cargo@v1
       with:
