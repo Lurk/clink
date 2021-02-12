@@ -1,15 +1,15 @@
-name: Rust
+name: lint and test
 
 on: [push, pull_request]
 
 jobs:
-  Unix:
+  Test:
     name: ${{ matrix.name }} (${{ matrix.config }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-16.04, ubuntu-18.04, ubuntu-20.04, macos-latest]
+        os: [ubuntu-16.04, ubuntu-18.04, ubuntu-20.04, ubuntu-latest, macos-latest, windows-latest]
         config: [Debug, Release]
         include:
           - os: macos-latest
