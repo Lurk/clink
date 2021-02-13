@@ -12,15 +12,14 @@ use std::time::Duration;
 fn main() {
     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
     let mut buff = "".to_string();
-    let mode: Mode;
-    match env::var("CLINK_MODE")
+    let mode: Mode = match env::var("CLINK_MODE")
         .unwrap_or_else(|_| "Remove".to_string())
         .as_str()
     {
-        "Remove" => mode = Mode::Remove,
-        "YourMom" => mode = Mode::YourMom,
-        _ => mode = Mode::Remove,
-    }
+        "Remove" => Mode::Remove,
+        "YourMom" => Mode::YourMom,
+        _ => Mode::Remove,
+    };
 
     loop {
         match ctx.get_contents() {
