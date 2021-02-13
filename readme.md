@@ -1,6 +1,6 @@
 # clink
 
-Automatically updates fbclid, utm_source, utm_campaign, utm_medium GET params from links in clipboard 
+Automatically updates values of fbclid, utm_source, utm_campaign and utm_medium GET params in links that are in clipboard
 
 ## Modes
 You can choose mode for clink by the setting env variable CLINK_MODE
@@ -15,7 +15,7 @@ removes fbclid, utm_source, utm_campaign, utm_medium GET params from links in cl
 ```
 CLINK_MODE=YourMom
 ```
-sets fbclid, utm_source, utm_campaign and utm_medium GET params to "your_mom" in links that are in clipboard
+sets values of fbclid, utm_source, utm_campaign and utm_medium GET params to "your_mom" in links that are in clipboard
 
 inspired by this [tweet](https://twitter.com/ftrain/status/1359138516681314311?s=21)
 
