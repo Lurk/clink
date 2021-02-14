@@ -1,6 +1,4 @@
-extern crate linkify;
-extern crate url;
-
+use crate::mode::Mode;
 use linkify::{LinkFinder, LinkKind};
 use url::Url;
 
@@ -111,11 +109,6 @@ pub fn find_and_replace(str: &str, mode: &Mode) -> String {
     }
 
     res
-}
-
-pub enum Mode {
-    Remove,
-    YourMom,
 }
 
 fn process_query(query: url::form_urlencoded::Parse<'_>, mode: &Mode) -> Vec<(String, String)> {

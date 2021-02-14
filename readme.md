@@ -3,17 +3,17 @@
 Automatically updates values of fbclid, utm_source, utm_campaign and utm_medium GET params in links that are in clipboard
 
 ## Modes
-You can choose mode for clink by the setting env variable CLINK_MODE
+You can choose mode for clink by the setting -m, --mode option 
 
 ### Remove mode (default)
 ```
-CLINK_MODE=Remove
+clink -m remove
 ```
 removes fbclid, utm_source, utm_campaign, utm_medium GET params from links in clipboard
 
 ### Your mom mode
 ```
-CLINK_MODE=YourMom
+clink -m your_mom
 ```
 sets values of fbclid, utm_source, utm_campaign and utm_medium GET params to "your_mom" in links that are in clipboard
 

@@ -14,10 +14,11 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "clink"
-version = "0.1.3"
+version = "0.2.0"
 dependencies = [
  "clipboard",
  "linkify",
+ "rustop",
  "url",
 ]
 
@@ -143,6 +144,12 @@ name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
+
+[[package]]
+name = "rustop"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59a6f317aba7842554266d387a51504f084fc460cab6eb59e19d98dc3d18b9ec"
 
 [[package]]
 name = "tinyvec"
