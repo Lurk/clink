@@ -1,5 +1,5 @@
 # clink
-Have you ever pasted a link in messenger and deleted all those fbclid, utm_source, utm_campaign, and utm_medium GET params by hands? Clink does it for you.
+Have you ever pasted a link in messenger and deleted all those fbclid, utm_source, utm_campaign, utm_medium GET params by hands? Clink does it for you.
 
 It sits quietly in the background, and if you copy a link to the clipboard, clink automatically removes those params for you.
 
