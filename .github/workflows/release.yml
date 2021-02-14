@@ -19,8 +19,8 @@ jobs:
             artifact_name: clink
             asset_name: clink-macos
           - os: windows-latest
-            artifact_name: clink
-            asset_name: clink-windows
+            artifact_name: clink.exe
+            asset_name: clink-windows.exe
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -33,7 +33,7 @@ jobs:
       - name: Build project
         run: cargo build --release --locked
       - name: Upload binary to release
-        uses: svenstaro/upload-release-action@v1-release
+        uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: target/release/${{ matrix.artifact_name }}
