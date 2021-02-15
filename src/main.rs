@@ -23,17 +23,17 @@ fn main() {
     }
 
     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-    let mut buff = "".to_string();
+    let mut previous_clipboard = "".to_string();
 
     loop {
         match ctx.get_contents() {
-            Ok(v) => {
-                if buff != v {
-                    let cleaned = find_and_replace(&v, &args.mode);
-                    if cleaned != v {
+            Ok(current_clipboard) => {
+                if previous_clipboard != current_clipboard {
+                    let cleaned = find_and_replace(&current_clipboard, &args.mode);
+                    if cleaned != current_clipboard {
                         ctx.set_contents(cleaned).unwrap();
                     }
-                    buff = v;
+                    previous_clipboard = current_clipboard;
                 }
             }
             Err(_e) => {}
