@@ -29,7 +29,10 @@ fn main() {
         match ctx.get_contents() {
             Ok(v) => {
                 if buff != v {
-                    ctx.set_contents(find_and_replace(&v, &args.mode)).unwrap();
+                    let cleaned = find_and_replace(&v, &args.mode);
+                    if cleaned != v {
+                        ctx.set_contents(cleaned).unwrap();
+                    }
                     buff = v;
                 }
             }
