@@ -1,5 +1,6 @@
 use crate::mode::Mode;
 use linkify::{LinkFinder, LinkKind};
+use rand::Rng;
 use url::Url;
 
 #[cfg(test)]
@@ -10,44 +11,45 @@ mod find_and_replace {
     fn naive() {
         assert_eq!(
             find_and_replace(
-                &"https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa".to_string(),
+                "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
                 &Mode::Remove
             ),
             "https://test.test/"
         );
         assert_eq!(
             find_and_replace(
-                &"https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa".to_string(),
+                "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
                 &Mode::YourMom
             ),
             "https://test.test/?fbclid=your_mom&utm_source=your_mom&utm_campaign=your_mom&utm_medium=your_mom"
+        );
+        assert_ne!(
+            find_and_replace(
+                "https://test.test/?fbclid=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_source=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_campaign=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_medium=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs",
+                &Mode::Evil
+            ),
+            "https://test.test/?fbclid=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_source=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_campaign=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_medium=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs"
         );
     }
     #[test]
     fn should_preserve_query() {
         assert_eq!(
-            find_and_replace(&"https://test.test/?abc=abc".to_string(), &Mode::Remove),
+            find_and_replace("https://test.test/?abc=abc", &Mode::Remove),
             "https://test.test/?abc=abc"
         );
         assert_eq!(
-            find_and_replace(&"https://test.test/?abc=abc".to_string(), &Mode::YourMom),
+            find_and_replace("https://test.test/?abc=abc", &Mode::YourMom),
             "https://test.test/?abc=abc"
         );
     }
     #[test]
     fn multiple_params() {
         assert_eq!(
-            find_and_replace(
-                &"https://test.test/?abc=abc&fbclid=flksj".to_string(),
-                &Mode::Remove
-            ),
+            find_and_replace("https://test.test/?abc=abc&fbclid=flksj", &Mode::Remove),
             "https://test.test/?abc=abc"
         );
         assert_eq!(
-            find_and_replace(
-                &"https://test.test/?abc=abc&fbclid=flksj".to_string(),
-                &Mode::YourMom
-            ),
+            find_and_replace("https://test.test/?abc=abc&fbclid=flksj", &Mode::YourMom),
             "https://test.test/?abc=abc&fbclid=your_mom"
         );
     }
@@ -55,15 +57,14 @@ mod find_and_replace {
     fn multiple_links() {
         assert_eq!(
             find_and_replace(
-                &"https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj"
-                    .to_string(),
+                "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
                 &Mode::Remove
             ),
             "https://test.test/?abc=abc\nhttps://test.test/?abc=abc"
         );
         assert_eq!(
             find_and_replace(
-                &"https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj".to_string(),
+                "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
                 &Mode::YourMom
             ),
             "https://test.test/?abc=abc&fbclid=your_mom\nhttps://test.test/?abc=abc&fbclid=your_mom"
@@ -73,14 +74,14 @@ mod find_and_replace {
     fn multiple_links_and_text() {
         assert_eq!(
             find_and_replace(
-                &"some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj".to_string(),
+                "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
                 &Mode::Remove
             ),
             "some text here https://test.test/?abc=abc here \nand herehttps://test.test/?abc=abc"
         );
         assert_eq!(
             find_and_replace(
-                &"some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj".to_string(),
+                "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
                 &Mode::YourMom
             ),
             "some text here https://test.test/?abc=abc&fbclid=your_mom here \nand herehttps://test.test/?abc=abc&fbclid=your_mom"
@@ -126,6 +127,25 @@ fn process_query(query: url::form_urlencoded::Parse<'_>, mode: &Mode) -> Vec<(St
                 }
             })
             .collect(),
+        Mode::Evil => {
+            let mut rng = rand::thread_rng();
+            query
+                .map(|p| {
+                    if is_hit(&p.0) {
+                        (
+                            p.0.to_string(),
+                            swap_two_chars(
+                                &p.1,
+                                rng.gen_range(0..p.1.to_string().len()),
+                                rng.gen_range(0..p.1.to_string().len()),
+                            ),
+                        )
+                    } else {
+                        (p.0.to_string(), p.1.to_string())
+                    }
+                })
+                .collect()
+        }
     }
 }
 
@@ -143,4 +163,20 @@ mod is_hit {
 }
 fn is_hit(p: &str) -> bool {
     p == "fbclid" || p == "utm_source" || p == "utm_campaign" || p == "utm_medium"
+}
+
+#[cfg(test)]
+mod swap {
+    use super::*;
+
+    #[test]
+    fn test_all() {
+        assert_eq!(swap_two_chars("0123456789", 2, 7), "0173456289");
+    }
+}
+
+fn swap_two_chars(s: &str, a: usize, b: usize) -> String {
+    let mut char_vector: Vec<char> = s.chars().collect();
+    char_vector.swap(a, b);
+    char_vector.iter().collect()
 }

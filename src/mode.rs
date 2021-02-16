@@ -6,6 +6,7 @@ use std::str::FromStr;
 pub enum Mode {
     Remove,
     YourMom,
+    Evil,
 }
 
 #[derive(Debug)]
@@ -39,7 +40,10 @@ impl FromStr for Mode {
         match day {
             "remove" => Ok(Mode::Remove),
             "your_mom" => Ok(Mode::YourMom),
-            _ => Err(ModeError::new("Mode can be \"remove\" or \"your_mom\"")),
+            "evil" => Ok(Mode::Evil),
+            _ => Err(ModeError::new(
+                "Mode can be \"remove\", \"your_mom\" or \"evil\"",
+            )),
         }
     }
 }
@@ -49,6 +53,7 @@ impl fmt::Display for Mode {
         match *self {
             Mode::Remove => write!(f, "Remove"),
             Mode::YourMom => write!(f, "YourMom"),
+            Mode::Evil => write!(f, "Evil"),
         }
     }
 }

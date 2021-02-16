@@ -31,13 +31,13 @@ fn main() {
                 if previous_clipboard != current_clipboard {
                     let cleaned = find_and_replace(&current_clipboard, &args.mode);
                     if cleaned != current_clipboard {
-                        ctx.set_contents(cleaned).unwrap();
+                        ctx.set_contents(cleaned.clone()).unwrap();
                     }
-                    previous_clipboard = current_clipboard;
+                    previous_clipboard = cleaned;
                 }
             }
             Err(_e) => {}
         }
-        thread::sleep(Duration::from_millis(100))
+        thread::sleep(Duration::from_millis(150))
     }
 }
