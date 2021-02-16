@@ -20,6 +20,11 @@ sets values of fbclid, utm_source, utm_campaign and utm_medium GET params to "yo
 
 inspired by this [tweet](https://twitter.com/ftrain/status/1359138516681314311?s=21)
 
+### Evil mode
+```
+clink -m evil
+```
+swap two random chars in values of fbclid, utm_source, utm_campaign and utm_medium GET params in links that are in clipboard (Diabolical Laughter)
 
 ## Build
 
