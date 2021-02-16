@@ -38,6 +38,6 @@ fn main() {
             }
             Err(_e) => {}
         }
-        thread::sleep(Duration::from_millis(100))
+        thread::sleep(Duration::from_millis(150))
     }
 }
