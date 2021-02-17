@@ -1,4 +1,5 @@
 use crate::mode::Mode;
+use crate::params::is_hit;
 use linkify::{LinkFinder, LinkKind};
 use rand::Rng;
 use url::Url;
@@ -147,22 +148,6 @@ fn process_query(query: url::form_urlencoded::Parse<'_>, mode: &Mode) -> Vec<(St
                 .collect()
         }
     }
-}
-
-#[cfg(test)]
-mod is_hit {
-    use super::*;
-
-    #[test]
-    fn test_all() {
-        assert!(is_hit("fbclid"));
-        assert!(is_hit("utm_source"));
-        assert!(is_hit("utm_campaign"));
-        assert!(is_hit("utm_medium"));
-    }
-}
-fn is_hit(p: &str) -> bool {
-    p == "fbclid" || p == "utm_source" || p == "utm_campaign" || p == "utm_medium"
 }
 
 #[cfg(test)]

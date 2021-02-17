@@ -1,13 +1,15 @@
 mod mode;
 mod utils;
+mod params;
 
-use self::mode::Mode;
-use clipboard::ClipboardContext;
-use clipboard::ClipboardProvider;
+use mode::Mode;
+use utils::find_and_replace;
+
+use clipboard::{ClipboardContext, ClipboardProvider};
 use rustop::opts;
 use std::thread;
 use std::time::Duration;
-use utils::find_and_replace;
+
 
 fn main() {
     let (args, _rest) = opts! {
