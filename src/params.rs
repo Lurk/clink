@@ -1,44 +1,48 @@
 use std::collections::HashMap;
-use lazy_static::lazy_static;
 
 #[cfg(test)]
 mod is_hit {
     use super::*;
 
+
     #[test]
     fn existing_keys() {
-      for param in get_params(){
-        assert!(is_hit(param));
+      let index = create_index(&get_default_params());
+      for param in get_default_params(){
+        assert!(is_hit(&param, &index));
       }
     }
 
     #[test]
     fn not_exiting_keys(){
-      assert!(!is_hit("not_exiting_key"));
+      let index = create_index(&get_default_params());
+      assert!(!is_hit("not_exiting_key", &index));
     }
 }
 
-lazy_static! {
-  pub static ref GET_PARAMS: HashMap<&'static str, bool> = {
-      let mut map = HashMap::new();
-      map.insert("fbclid", true);
-      map.insert("gclid", true);
-      map.insert("gclsrc", true);
-      map.insert("dclid", true);
-      map.insert("zanpid", true);
-      map.insert("utm_source", true);
-      map.insert("utm_campaign", true);
-      map.insert("utm_medium", true);
-      map.insert("utm_term", true);
-      map.insert("utm_content", true);
-      map
-  };
+pub fn get_default_params() -> Vec<String>{
+  vec![
+    "fbclid".to_string(), 
+    "gclid".to_string(), 
+    "gclsrc".to_string(), 
+    "dclid".to_string(), 
+    "zanpid".to_string(), 
+    "utm_source".to_string(), 
+    "utm_campaign".to_string(), 
+    "utm_medium".to_string(), 
+    "utm_term".to_string(), 
+    "utm_content".to_string()
+    ]
 }
 
-pub fn is_hit(name: &str) -> bool {
-  GET_PARAMS.contains_key(name)
+pub fn create_index(vec: &[String]) -> HashMap<String, bool>{
+  let mut map: HashMap<String, bool> = HashMap::new();
+  for key in vec.iter(){
+    map.insert(key.to_string(), true);
+  }
+  map
 }
 
-pub fn get_params() -> Vec<&'static &'static str>{
-  GET_PARAMS.keys().collect()
+pub fn is_hit(name: &str, params: &HashMap<String, bool>) -> bool {
+  params.contains_key(name)
 }
