@@ -35,8 +35,8 @@ params = [
 ## Modes
 
 * remove - removes params from links in clipboard
-* your_mom - Sets values of params to "your_mom" in links that are in clipboard inspired by this [tweet](https://twitter.com/ftrain/status/1359138516681314311?s=21)
-* evil -  swap two random chars in values params in links that are in clipboard (Diabolical Laughter)
+* your_mom - Sets values to "your_mom" (inspired by this [tweet](https://twitter.com/ftrain/status/1359138516681314311?s=21))
+* evil -  swap two random chars in values (Diabolical Laughter)
 
 ## Build
 
