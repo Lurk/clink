@@ -11,11 +11,13 @@ In 0.4.0, we introduced the toml config. Clink will create a "clink.toml" file i
 # You can find detail description of modes bellow
 # one of: remove, your_mom, evil
 mode = 'remove' 
-# text for your_mom mode  
+# Text for your_mom mode  
 your_mom = 'your_mom' 
+# If true in your_mom mode, Clink will automatically switch to the remove mode in Mother's Day. 
+except_mothers_day: true,
 # How often Clink will check clipboard in milliseconds
 sleep_duration = 150
-# which GET params Clink should update
+# Which GET params Clink should update
 params = [
     'fbclid', # Facebook click identifier
     'gclid', # Google click identifier
@@ -33,8 +35,8 @@ params = [
 ## Modes
 
 * remove - removes params from links in clipboard
-* your_mom - Sets values of params to "your_mom" in links that are in clipboard inspired by this [tweet](https://twitter.com/ftrain/status/1359138516681314311?s=21)
-* evil -  swap two random chars in values params in links that are in clipboard (Diabolical Laughter)
+* your_mom - Sets values to "your_mom" (inspired by this [tweet](https://twitter.com/ftrain/status/1359138516681314311?s=21))
+* evil -  swap two random chars in values (Diabolical Laughter)
 
 ## Build
 

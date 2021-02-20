@@ -1,14 +1,16 @@
 use crate::mode::Mode;
-use crate::params::{create_index, is_hit};
+use crate::params::is_hit;
 use crate::ClinkConfig;
+use chrono::prelude::*;
 use linkify::{LinkFinder, LinkKind};
 use rand::Rng;
+use std::collections::HashMap;
 use url::Url;
 
 #[cfg(test)]
 mod find_and_replace {
     use super::*;
-    use crate::params::get_default_params;
+    use crate::params::{create_index, get_default_params};
 
     #[test]
     fn naive() {
@@ -18,9 +20,11 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::Remove,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params(),
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "https://test.test/"
         );
@@ -30,9 +34,11 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "https://test.test/?fbclid=your_mom&utm_source=your_mom&utm_campaign=your_mom&utm_medium=your_mom"
         );
@@ -42,9 +48,11 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::Evil,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "https://test.test/?fbclid=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_source=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_campaign=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_medium=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs"
         );
@@ -57,9 +65,11 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::Remove,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "https://test.test/?abc=abc"
         );
@@ -69,9 +79,11 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "https://test.test/?abc=abc"
         );
@@ -84,9 +96,11 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::Remove,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "https://test.test/?abc=abc"
         );
@@ -96,9 +110,11 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "https://test.test/?abc=abc&fbclid=your_mom"
         );
@@ -111,9 +127,11 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::Remove,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "https://test.test/?abc=abc\nhttps://test.test/?abc=abc"
         );
@@ -123,9 +141,11 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "https://test.test/?abc=abc&fbclid=your_mom\nhttps://test.test/?abc=abc&fbclid=your_mom"
         );
@@ -138,9 +158,11 @@ mod find_and_replace {
                 & ClinkConfig {
                     mode: Mode::Remove,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "some text here https://test.test/?abc=abc here \nand herehttps://test.test/?abc=abc"
         );
@@ -150,9 +172,11 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "some text here https://test.test/?abc=abc&fbclid=your_mom here \nand herehttps://test.test/?abc=abc&fbclid=your_mom"
         );
@@ -165,9 +189,11 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "foo".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
-                }
+                },
+                &create_index(&get_default_params())
             ),
             "https://test.test/?fbclid=foo&utm_source=foo&utm_campaign=foo&utm_medium=foo"
         );
@@ -181,23 +207,25 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: vec!["foo".to_string()]
-                }
+                },
+                &create_index(&vec!["foo".to_string()])
             ),
             "https://test.test/?foo=your_mom"
         );
     }
 }
 
-pub fn find_and_replace(str: &str, config: &ClinkConfig) -> String {
+pub fn find_and_replace(str: &str, config: &ClinkConfig, index: &HashMap<String, bool>) -> String {
     let mut finder = LinkFinder::new();
     finder.kinds(&[LinkKind::Url]);
     let mut res = str.to_string();
     for link in finder.links(str) {
         let l = Url::parse(link.as_str()).unwrap();
 
-        let query: Vec<(_, _)> = process_query(l.query_pairs(), config);
+        let query: Vec<(_, _)> = process_query(l.query_pairs(), config, index);
 
         let mut l2 = l.clone();
         l2.set_query(None);
@@ -216,27 +244,27 @@ pub fn find_and_replace(str: &str, config: &ClinkConfig) -> String {
 fn process_query(
     query: url::form_urlencoded::Parse<'_>,
     config: &ClinkConfig,
+    index: &HashMap<String, bool>,
 ) -> Vec<(String, String)> {
-    let index = create_index(&config.params);
     match config.mode {
-        Mode::Remove => query
-            .filter(|p| !is_hit(&p.0, &index))
-            .map(|p| (p.0.to_string(), p.1.to_string()))
-            .collect(),
-        Mode::YourMom => query
-            .map(|p| {
-                if is_hit(&p.0, &index) {
-                    (p.0.to_string(), config.your_mom.clone())
+        Mode::Remove => filter(query, index),
+        Mode::YourMom => {
+            if config.except_mothers_day {
+                let date = Utc::today();
+                if date.month() == 5 && date.day() == 9 {
+                    filter(query, index)
                 } else {
-                    (p.0.to_string(), p.1.to_string())
+                    your_mom(query, index, config)
                 }
-            })
-            .collect(),
+            } else {
+                your_mom(query, index, config)
+            }
+        }
         Mode::Evil => {
             let mut rng = rand::thread_rng();
             query
                 .map(|p| {
-                    if is_hit(&p.0, &index) {
+                    if is_hit(&p.0, index) {
                         (
                             p.0.to_string(),
                             swap_two_chars(
@@ -268,4 +296,30 @@ fn swap_two_chars(s: &str, a: usize, b: usize) -> String {
     let mut char_vector: Vec<char> = s.chars().collect();
     char_vector.swap(a, b);
     char_vector.iter().collect()
+}
+
+fn filter(
+    query: url::form_urlencoded::Parse<'_>,
+    index: &HashMap<String, bool>,
+) -> Vec<(String, String)> {
+    query
+        .filter(|p| !is_hit(&p.0, index))
+        .map(|p| (p.0.to_string(), p.1.to_string()))
+        .collect()
+}
+
+fn your_mom(
+    query: url::form_urlencoded::Parse<'_>,
+    index: &HashMap<String, bool>,
+    config: &ClinkConfig,
+) -> Vec<(String, String)> {
+    query
+        .map(|p| {
+            if is_hit(&p.0, &index) {
+                (p.0.to_string(), config.your_mom.clone())
+            } else {
+                (p.0.to_string(), p.1.to_string())
+            }
+        })
+        .collect()
 }
