@@ -1,4 +1,6 @@
 use crate::mode::Mode;
+use crate::params::{create_index, is_hit};
+use crate::ClinkConfig;
 use linkify::{LinkFinder, LinkKind};
 use rand::Rng;
 use url::Url;
@@ -6,27 +8,43 @@ use url::Url;
 #[cfg(test)]
 mod find_and_replace {
     use super::*;
+    use crate::params::get_default_params;
 
     #[test]
     fn naive() {
         assert_eq!(
             find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
-                &Mode::Remove
+                &ClinkConfig {
+                    mode: Mode::Remove,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params(),
+                }
             ),
             "https://test.test/"
         );
         assert_eq!(
             find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
-                &Mode::YourMom
+                &ClinkConfig {
+                    mode: Mode::YourMom,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params()
+                }
             ),
             "https://test.test/?fbclid=your_mom&utm_source=your_mom&utm_campaign=your_mom&utm_medium=your_mom"
         );
         assert_ne!(
             find_and_replace(
                 "https://test.test/?fbclid=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_source=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_campaign=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_medium=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs",
-                &Mode::Evil
+                &ClinkConfig {
+                    mode: Mode::Evil,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params()
+                }
             ),
             "https://test.test/?fbclid=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_source=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_campaign=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_medium=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs"
         );
@@ -34,22 +52,54 @@ mod find_and_replace {
     #[test]
     fn should_preserve_query() {
         assert_eq!(
-            find_and_replace("https://test.test/?abc=abc", &Mode::Remove),
+            find_and_replace(
+                "https://test.test/?abc=abc",
+                &ClinkConfig {
+                    mode: Mode::Remove,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params()
+                }
+            ),
             "https://test.test/?abc=abc"
         );
         assert_eq!(
-            find_and_replace("https://test.test/?abc=abc", &Mode::YourMom),
+            find_and_replace(
+                "https://test.test/?abc=abc",
+                &ClinkConfig {
+                    mode: Mode::YourMom,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params()
+                }
+            ),
             "https://test.test/?abc=abc"
         );
     }
     #[test]
     fn multiple_params() {
         assert_eq!(
-            find_and_replace("https://test.test/?abc=abc&fbclid=flksj", &Mode::Remove),
+            find_and_replace(
+                "https://test.test/?abc=abc&fbclid=flksj",
+                &ClinkConfig {
+                    mode: Mode::Remove,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params()
+                }
+            ),
             "https://test.test/?abc=abc"
         );
         assert_eq!(
-            find_and_replace("https://test.test/?abc=abc&fbclid=flksj", &Mode::YourMom),
+            find_and_replace(
+                "https://test.test/?abc=abc&fbclid=flksj",
+                &ClinkConfig {
+                    mode: Mode::YourMom,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params()
+                }
+            ),
             "https://test.test/?abc=abc&fbclid=your_mom"
         );
     }
@@ -58,14 +108,24 @@ mod find_and_replace {
         assert_eq!(
             find_and_replace(
                 "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
-                &Mode::Remove
+                &ClinkConfig {
+                    mode: Mode::Remove,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params()
+                }
             ),
             "https://test.test/?abc=abc\nhttps://test.test/?abc=abc"
         );
         assert_eq!(
             find_and_replace(
                 "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
-                &Mode::YourMom
+                &ClinkConfig {
+                    mode: Mode::YourMom,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params()
+                }
             ),
             "https://test.test/?abc=abc&fbclid=your_mom\nhttps://test.test/?abc=abc&fbclid=your_mom"
         );
@@ -75,28 +135,69 @@ mod find_and_replace {
         assert_eq!(
             find_and_replace(
                 "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
-                &Mode::Remove
+                & ClinkConfig {
+                    mode: Mode::Remove,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params()
+                }
             ),
             "some text here https://test.test/?abc=abc here \nand herehttps://test.test/?abc=abc"
         );
         assert_eq!(
             find_and_replace(
                 "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
-                &Mode::YourMom
+                &ClinkConfig {
+                    mode: Mode::YourMom,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params()
+                }
             ),
             "some text here https://test.test/?abc=abc&fbclid=your_mom here \nand herehttps://test.test/?abc=abc&fbclid=your_mom"
         );
     }
+    #[test]
+    fn custom_text_for_your_mom_mode() {
+        assert_eq!(
+            find_and_replace(
+                "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
+                &ClinkConfig {
+                    mode: Mode::YourMom,
+                    your_mom: "foo".to_string(),
+                    sleep_duration: 150,
+                    params: get_default_params()
+                }
+            ),
+            "https://test.test/?fbclid=foo&utm_source=foo&utm_campaign=foo&utm_medium=foo"
+        );
+    }
+
+    #[test]
+    fn custom_params() {
+        assert_eq!(
+            find_and_replace(
+                "https://test.test/?foo=dsadsa",
+                &ClinkConfig {
+                    mode: Mode::YourMom,
+                    your_mom: "your_mom".to_string(),
+                    sleep_duration: 150,
+                    params: vec!["foo".to_string()]
+                }
+            ),
+            "https://test.test/?foo=your_mom"
+        );
+    }
 }
 
-pub fn find_and_replace(str: &str, mode: &Mode) -> String {
+pub fn find_and_replace(str: &str, config: &ClinkConfig) -> String {
     let mut finder = LinkFinder::new();
     finder.kinds(&[LinkKind::Url]);
     let mut res = str.to_string();
     for link in finder.links(str) {
         let l = Url::parse(link.as_str()).unwrap();
 
-        let query: Vec<(_, _)> = process_query(l.query_pairs(), mode);
+        let query: Vec<(_, _)> = process_query(l.query_pairs(), config);
 
         let mut l2 = l.clone();
         l2.set_query(None);
@@ -112,16 +213,20 @@ pub fn find_and_replace(str: &str, mode: &Mode) -> String {
     res
 }
 
-fn process_query(query: url::form_urlencoded::Parse<'_>, mode: &Mode) -> Vec<(String, String)> {
-    match mode {
+fn process_query(
+    query: url::form_urlencoded::Parse<'_>,
+    config: &ClinkConfig,
+) -> Vec<(String, String)> {
+    let index = create_index(&config.params);
+    match config.mode {
         Mode::Remove => query
-            .filter(|p| !is_hit(&p.0))
+            .filter(|p| !is_hit(&p.0, &index))
             .map(|p| (p.0.to_string(), p.1.to_string()))
             .collect(),
         Mode::YourMom => query
             .map(|p| {
-                if is_hit(&p.0) {
-                    (p.0.to_string(), "your_mom".to_string())
+                if is_hit(&p.0, &index) {
+                    (p.0.to_string(), config.your_mom.clone())
                 } else {
                     (p.0.to_string(), p.1.to_string())
                 }
@@ -131,7 +236,7 @@ fn process_query(query: url::form_urlencoded::Parse<'_>, mode: &Mode) -> Vec<(St
             let mut rng = rand::thread_rng();
             query
                 .map(|p| {
-                    if is_hit(&p.0) {
+                    if is_hit(&p.0, &index) {
                         (
                             p.0.to_string(),
                             swap_two_chars(
@@ -147,22 +252,6 @@ fn process_query(query: url::form_urlencoded::Parse<'_>, mode: &Mode) -> Vec<(St
                 .collect()
         }
     }
-}
-
-#[cfg(test)]
-mod is_hit {
-    use super::*;
-
-    #[test]
-    fn test_all() {
-        assert!(is_hit("fbclid"));
-        assert!(is_hit("utm_source"));
-        assert!(is_hit("utm_campaign"));
-        assert!(is_hit("utm_medium"));
-    }
-}
-fn is_hit(p: &str) -> bool {
-    p == "fbclid" || p == "utm_source" || p == "utm_campaign" || p == "utm_medium"
 }
 
 #[cfg(test)]
