@@ -1,8 +1,10 @@
 use crate::mode::Mode;
 use crate::params::{create_index, is_hit};
 use crate::ClinkConfig;
+use chrono::prelude::*;
 use linkify::{LinkFinder, LinkKind};
 use rand::Rng;
+use std::collections::HashMap;
 use url::Url;
 
 #[cfg(test)]
@@ -18,6 +20,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::Remove,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params(),
                 }
@@ -30,6 +33,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
                 }
@@ -42,6 +46,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::Evil,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
                 }
@@ -57,6 +62,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::Remove,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
                 }
@@ -69,6 +75,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
                 }
@@ -84,6 +91,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::Remove,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
                 }
@@ -96,6 +104,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
                 }
@@ -111,6 +120,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::Remove,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
                 }
@@ -123,6 +133,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
                 }
@@ -138,6 +149,7 @@ mod find_and_replace {
                 & ClinkConfig {
                     mode: Mode::Remove,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
                 }
@@ -150,6 +162,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
                 }
@@ -165,6 +178,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "foo".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: get_default_params()
                 }
@@ -181,6 +195,7 @@ mod find_and_replace {
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     your_mom: "your_mom".to_string(),
+                    except_mothers_day: false,
                     sleep_duration: 150,
                     params: vec!["foo".to_string()]
                 }
@@ -219,19 +234,19 @@ fn process_query(
 ) -> Vec<(String, String)> {
     let index = create_index(&config.params);
     match config.mode {
-        Mode::Remove => query
-            .filter(|p| !is_hit(&p.0, &index))
-            .map(|p| (p.0.to_string(), p.1.to_string()))
-            .collect(),
-        Mode::YourMom => query
-            .map(|p| {
-                if is_hit(&p.0, &index) {
-                    (p.0.to_string(), config.your_mom.clone())
+        Mode::Remove => filter(query, &index),
+        Mode::YourMom => {
+            if config.except_mothers_day {
+                let date = Utc::today();
+                if date.month() == 5 && date.day() == 9 {
+                    filter(query, &index)
                 } else {
-                    (p.0.to_string(), p.1.to_string())
+                    your_mom(query, &index, config)
                 }
-            })
-            .collect(),
+            } else {
+                your_mom(query, &index, config)
+            }
+        }
         Mode::Evil => {
             let mut rng = rand::thread_rng();
             query
@@ -268,4 +283,30 @@ fn swap_two_chars(s: &str, a: usize, b: usize) -> String {
     let mut char_vector: Vec<char> = s.chars().collect();
     char_vector.swap(a, b);
     char_vector.iter().collect()
+}
+
+fn filter(
+    query: url::form_urlencoded::Parse<'_>,
+    index: &HashMap<String, bool>,
+) -> Vec<(String, String)> {
+    query
+        .filter(|p| !is_hit(&p.0, index))
+        .map(|p| (p.0.to_string(), p.1.to_string()))
+        .collect()
+}
+
+fn your_mom(
+    query: url::form_urlencoded::Parse<'_>,
+    index: &HashMap<String, bool>,
+    config: &ClinkConfig,
+) -> Vec<(String, String)> {
+    query
+        .map(|p| {
+            if is_hit(&p.0, &index) {
+                (p.0.to_string(), config.your_mom.clone())
+            } else {
+                (p.0.to_string(), p.1.to_string())
+            }
+        })
+        .collect()
 }

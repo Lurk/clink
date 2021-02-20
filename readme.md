@@ -11,11 +11,13 @@ In 0.4.0, we introduced the toml config. Clink will create a "clink.toml" file i
 # You can find detail description of modes bellow
 # one of: remove, your_mom, evil
 mode = 'remove' 
-# text for your_mom mode  
+# Text for your_mom mode  
 your_mom = 'your_mom' 
+# If true in your_mom mode, Clink will automatically switch to the remove mode in Mother's Day. 
+except_mothers_day: true,
 # How often Clink will check clipboard in milliseconds
 sleep_duration = 150
-# which GET params Clink should update
+# Which GET params Clink should update
 params = [
     'fbclid', # Facebook click identifier
     'gclid', # Google click identifier

@@ -16,6 +16,7 @@ use std::time::Duration;
 pub struct ClinkConfig {
     mode: Mode,
     your_mom: String,
+    except_mothers_day: bool,
     sleep_duration: u64,
     params: Vec<String>,
 }
@@ -25,8 +26,9 @@ impl ::std::default::Default for ClinkConfig {
         Self {
             mode: Mode::Remove,
             your_mom: "your_mom".to_string(),
-            params: get_default_params(),
+            except_mothers_day: true,
             sleep_duration: 150,
+            params: get_default_params(),
         }
     }
 }
