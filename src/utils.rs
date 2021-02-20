@@ -1,5 +1,5 @@
 use crate::mode::Mode;
-use crate::params::{is_hit, create_index};
+use crate::params::{create_index, is_hit};
 use crate::ClinkConfig;
 use linkify::{LinkFinder, LinkKind};
 use rand::Rng;
@@ -16,7 +16,7 @@ mod find_and_replace {
             find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
                 &ClinkConfig {
-                    mode: Mode::Remove, 
+                    mode: Mode::Remove,
                     params: get_default_params()
                 }
             ),
@@ -47,7 +47,7 @@ mod find_and_replace {
     fn should_preserve_query() {
         assert_eq!(
             find_and_replace(
-                "https://test.test/?abc=abc", 
+                "https://test.test/?abc=abc",
                 &ClinkConfig {
                     mode: Mode::Remove,
                     params: get_default_params()
@@ -57,7 +57,7 @@ mod find_and_replace {
         );
         assert_eq!(
             find_and_replace(
-                "https://test.test/?abc=abc", 
+                "https://test.test/?abc=abc",
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     params: get_default_params()
@@ -70,7 +70,7 @@ mod find_and_replace {
     fn multiple_params() {
         assert_eq!(
             find_and_replace(
-                "https://test.test/?abc=abc&fbclid=flksj", 
+                "https://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig {
                     mode: Mode::Remove,
                     params: get_default_params()
@@ -80,7 +80,7 @@ mod find_and_replace {
         );
         assert_eq!(
             find_and_replace(
-                "https://test.test/?abc=abc&fbclid=flksj", 
+                "https://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig {
                     mode: Mode::YourMom,
                     params: get_default_params()
@@ -160,7 +160,10 @@ pub fn find_and_replace(str: &str, config: &ClinkConfig) -> String {
     res
 }
 
-fn process_query(query: url::form_urlencoded::Parse<'_>, config: &ClinkConfig) -> Vec<(String, String)> {
+fn process_query(
+    query: url::form_urlencoded::Parse<'_>,
+    config: &ClinkConfig,
+) -> Vec<(String, String)> {
     let index = create_index(&config.params);
     match config.mode {
         Mode::Remove => query

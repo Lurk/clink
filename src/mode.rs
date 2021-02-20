@@ -1,13 +1,13 @@
+use serde::{Deserialize, Serialize};
 use std::fmt;
-use serde::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum Mode {
-    #[serde(rename="remove")]
+    #[serde(rename = "remove")]
     Remove,
-    #[serde(rename="your_mom")]
+    #[serde(rename = "your_mom")]
     YourMom,
-    #[serde(rename="evil")]
+    #[serde(rename = "evil")]
     Evil,
 }
 
