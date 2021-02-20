@@ -3,7 +3,7 @@ mod params;
 mod utils;
 
 use mode::Mode;
-use params::get_default_params;
+use params::{create_index, get_default_params};
 use utils::find_and_replace;
 
 use clipboard::{ClipboardContext, ClipboardProvider};
@@ -60,12 +60,12 @@ fn main() -> Result<(), confy::ConfyError> {
 
     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
     let mut previous_clipboard = "".to_string();
-
+    let index = create_index(&cfg.params);
     loop {
         match ctx.get_contents() {
             Ok(current_clipboard) => {
                 if previous_clipboard != current_clipboard {
-                    let cleaned = find_and_replace(&current_clipboard, &cfg);
+                    let cleaned = find_and_replace(&current_clipboard, &cfg, &index);
                     if cleaned != current_clipboard {
                         ctx.set_contents(cleaned.clone()).unwrap();
                     }
