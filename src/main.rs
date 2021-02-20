@@ -15,6 +15,7 @@ use std::time::Duration;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClinkConfig {
     mode: Mode,
+    sleep_duration: u64,
     params: Vec<String>,
 }
 
@@ -23,6 +24,7 @@ impl ::std::default::Default for ClinkConfig {
         Self {
             mode: Mode::Remove,
             params: get_default_params(),
+            sleep_duration: 150,
         }
     }
 }
@@ -68,6 +70,6 @@ fn main() -> Result<(), confy::ConfyError> {
             }
             Err(_e) => {}
         }
-        thread::sleep(Duration::from_millis(150))
+        thread::sleep(Duration::from_millis(cfg.sleep_duration))
     }
 }

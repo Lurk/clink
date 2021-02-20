@@ -17,7 +17,8 @@ mod find_and_replace {
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
                 &ClinkConfig {
                     mode: Mode::Remove,
-                    params: get_default_params()
+                    sleep_duration: 150,
+                    params: get_default_params(),
                 }
             ),
             "https://test.test/"
@@ -27,6 +28,7 @@ mod find_and_replace {
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
                 &ClinkConfig {
                     mode: Mode::YourMom,
+                    sleep_duration: 150,
                     params: get_default_params()
                 }
             ),
@@ -37,6 +39,7 @@ mod find_and_replace {
                 "https://test.test/?fbclid=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_source=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_campaign=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_medium=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs",
                 &ClinkConfig {
                     mode: Mode::Evil,
+                    sleep_duration: 150,
                     params: get_default_params()
                 }
             ),
@@ -50,6 +53,7 @@ mod find_and_replace {
                 "https://test.test/?abc=abc",
                 &ClinkConfig {
                     mode: Mode::Remove,
+                    sleep_duration: 150,
                     params: get_default_params()
                 }
             ),
@@ -60,6 +64,7 @@ mod find_and_replace {
                 "https://test.test/?abc=abc",
                 &ClinkConfig {
                     mode: Mode::YourMom,
+                    sleep_duration: 150,
                     params: get_default_params()
                 }
             ),
@@ -73,6 +78,7 @@ mod find_and_replace {
                 "https://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig {
                     mode: Mode::Remove,
+                    sleep_duration: 150,
                     params: get_default_params()
                 }
             ),
@@ -83,6 +89,7 @@ mod find_and_replace {
                 "https://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig {
                     mode: Mode::YourMom,
+                    sleep_duration: 150,
                     params: get_default_params()
                 }
             ),
@@ -96,6 +103,7 @@ mod find_and_replace {
                 "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig {
                     mode: Mode::Remove,
+                    sleep_duration: 150,
                     params: get_default_params()
                 }
             ),
@@ -106,6 +114,7 @@ mod find_and_replace {
                 "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig {
                     mode: Mode::YourMom,
+                    sleep_duration: 150,
                     params: get_default_params()
                 }
             ),
@@ -119,6 +128,7 @@ mod find_and_replace {
                 "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
                 & ClinkConfig {
                     mode: Mode::Remove,
+                    sleep_duration: 150,
                     params: get_default_params()
                 }
             ),
@@ -129,6 +139,7 @@ mod find_and_replace {
                 "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig {
                     mode: Mode::YourMom,
+                    sleep_duration: 150,
                     params: get_default_params()
                 }
             ),
