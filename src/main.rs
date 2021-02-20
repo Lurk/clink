@@ -15,6 +15,7 @@ use std::time::Duration;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClinkConfig {
     mode: Mode,
+    your_mom: String,
     sleep_duration: u64,
     params: Vec<String>,
 }
@@ -23,6 +24,7 @@ impl ::std::default::Default for ClinkConfig {
     fn default() -> Self {
         Self {
             mode: Mode::Remove,
+            your_mom: "your_mom".to_string(),
             params: get_default_params(),
             sleep_duration: 150,
         }
