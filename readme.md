@@ -9,7 +9,7 @@ In 0.4.0, we introduced the toml config. Clink will create a "clink.toml" file i
 
 ```
 # You can find detail description of modes bellow
-# one of: remove, your_mom, evil
+# one of: remove, your_mom, evil, rickroll
 mode = 'remove' 
 # Text for your_mom mode  
 your_mom = 'your_mom' 
@@ -37,6 +37,7 @@ params = [
 * remove - removes params from links in clipboard
 * your_mom - Sets values to "your_mom" (inspired by this [tweet](https://twitter.com/ftrain/status/1359138516681314311?s=21))
 * evil -  swap two random chars in values (Diabolical Laughter)
+* rickroll -  Rickroll them by replacing the actual value with a base64 encoded youtube link
 
 ## Build
 

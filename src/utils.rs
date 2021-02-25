@@ -254,12 +254,17 @@ fn process_query(
                 if date.month() == 5 && date.day() == 9 {
                     filter(query, index)
                 } else {
-                    your_mom(query, index, config)
+                    replace(query, index, config.your_mom.clone())
                 }
             } else {
-                your_mom(query, index, config)
+                replace(query, index, config.your_mom.clone())
             }
         }
+        Mode::RickRoll => replace(
+            query,
+            index,
+            "aHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g/dj1kUXc0dzlXZ1hjUQo".to_string(),
+        ),
         Mode::Evil => {
             let mut rng = rand::thread_rng();
             query
@@ -308,15 +313,15 @@ fn filter(
         .collect()
 }
 
-fn your_mom(
+fn replace(
     query: url::form_urlencoded::Parse<'_>,
     index: &HashMap<String, bool>,
-    config: &ClinkConfig,
+    new_string: String,
 ) -> Vec<(String, String)> {
     query
         .map(|p| {
             if is_hit(&p.0, &index) {
-                (p.0.to_string(), config.your_mom.clone())
+                (p.0.to_string(), new_string.clone())
             } else {
                 (p.0.to_string(), p.1.to_string())
             }

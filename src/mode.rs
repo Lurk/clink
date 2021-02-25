@@ -9,6 +9,8 @@ pub enum Mode {
     YourMom,
     #[serde(rename = "evil")]
     Evil,
+    #[serde(rename = "rickroll")]
+    RickRoll,
 }
 
 impl fmt::Display for Mode {
@@ -17,6 +19,7 @@ impl fmt::Display for Mode {
             Mode::Remove => write!(f, "Remove"),
             Mode::YourMom => write!(f, "YourMom"),
             Mode::Evil => write!(f, "Evil"),
+            Mode::RickRoll => write!(f, "RickRoll"),
         }
     }
 }
