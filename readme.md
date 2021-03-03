@@ -5,7 +5,17 @@ It sits quietly in the background, and if you copy a link to the clipboard, Clin
 
 ## Config
 
-In 0.4.0, we introduced the toml config. Clink will create a "clink.toml" file in a directory where the executable is located on a first-run. In this file, you will find the default config for Clink.
+Path for config file can be altered by -c, --config option.
+Default path:
+* Mac: /Users/Alice/Library/Application Support\clink\config.toml
+* Lin: /home/alice/.config/clink/config.toml
+* Win: C:\Users\Alice\AppData\Roaming\clink\config.toml
+* fallback: current directory/config.toml
+
+
+On the first run, clink will create the default config in the path.
+
+Default config:
 
 ```
 # You can find detail description of modes bellow
@@ -28,7 +38,7 @@ params = [
     'utm_campaign', # Identifies a specific product promotion or strategic campaign
     'utm_medium', # Identifies what type of link was used
     'utm_term', # Identifies search terms
-    'utm_content', Identifies what specifically was clicked to bring the user to the site
+    'utm_content', # Identifies what specifically was clicked to bring the user to the site
 ]
 ```
 

@@ -68,11 +68,12 @@ dependencies = [
 
 [[package]]
 name = "clink"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "clipboard",
  "confy",
+ "dirs",
  "linkify",
  "rand",
  "rustop",
@@ -137,6 +138,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "551a778172a450d7fc12e629ca3b0428d00f6afa9a43da1b630d54604e97371c"
 dependencies = [
  "cfg-if 0.1.10",
+ "dirs-sys",
+]
+
+[[package]]
+name = "dirs"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "142995ed02755914747cc6ca76fc7e4583cd18578746716d0508ea6ed558b9ff"
+dependencies = [
  "dirs-sys",
 ]
 

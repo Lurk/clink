@@ -4,7 +4,7 @@ use crate::ClinkConfig;
 use chrono::prelude::*;
 use linkify::{LinkFinder, LinkKind};
 use rand::Rng;
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 use url::Url;
 
 #[cfg(test)]
@@ -322,4 +322,17 @@ fn your_mom(
             }
         })
         .collect()
+}
+
+pub fn fallback_config_path(path: Option<PathBuf>) -> PathBuf {
+    let p = match path {
+        Some(p) => p.join("clink"),
+        None => std::env::current_exe()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .to_path_buf(),
+    };
+
+    p.join("config.toml")
 }
