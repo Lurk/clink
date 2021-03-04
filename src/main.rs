@@ -4,13 +4,14 @@ mod utils;
 
 use mode::Mode;
 use params::{create_index, get_default_params};
-use utils::find_and_replace;
+use utils::{fallback_config_path, find_and_replace};
 
 use clipboard::{ClipboardContext, ClipboardProvider};
+use dirs::config_dir;
 use rustop::opts;
 use serde::{Deserialize, Serialize};
-use std::thread;
 use std::time::Duration;
+use std::{path::PathBuf, thread};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClinkConfig {
@@ -39,14 +40,11 @@ fn main() -> Result<(), confy::ConfyError> {
         synopsis "Clink automatically cleans url in your clipboard";
         version env!("CARGO_PKG_VERSION");
         opt verbose:bool, desc:"Be verbose.";
+        opt config:String = fallback_config_path(config_dir()).into_os_string().into_string().unwrap(), desc: "config path";
     }
     .parse_or_exit();
 
-    let config_path = std::env::current_exe()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("clink.toml");
+    let config_path = PathBuf::from(args.config);
     let cfg: ClinkConfig = confy::load_path(&config_path)?;
 
     if !config_path.is_file() {
