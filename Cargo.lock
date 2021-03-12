@@ -84,6 +84,7 @@ dependencies = [
  "rand",
  "rustop",
  "serde",
+ "toml",
  "url",
 ]
 

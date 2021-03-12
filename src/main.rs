@@ -10,8 +10,9 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 use dirs_next::config_dir;
 use rustop::opts;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
-use std::{path::PathBuf, thread};
+use toml;
+
+use std::{path::PathBuf, process, thread, time::Duration};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClinkConfig {
@@ -25,9 +26,27 @@ impl ::std::default::Default for ClinkConfig {
     fn default() -> Self {
         Self {
             mode: Mode::Remove,
-            replace_to: "your_mom".to_string(),
+            replace_to: "aHR0cHM6Ly95b3V0dS5iZS9kUXc0dzlXZ1hjUQ==".to_string(),
             sleep_duration: 150,
             params: get_default_params(),
+        }
+    }
+}
+
+fn load_config(config_path: &PathBuf) -> ClinkConfig {
+    match confy::load_path(&config_path) {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            println!("Clink {}\nConfig error\n", env!("CARGO_PKG_VERSION"));
+            println!("looks like you have bad config or config for an old version");
+            println!("Look at: {:?}\n", config_path);
+            println!(
+                "config should look like this:\n\n{}",
+                toml::to_string(&ClinkConfig::default()).unwrap()
+            );
+
+            eprintln!("original error:\n {:#?}", e);
+            process::exit(1);
         }
     }
 }
@@ -43,7 +62,8 @@ fn main() -> Result<(), confy::ConfyError> {
     .parse_or_exit();
 
     let config_path = PathBuf::from(args.config);
-    let cfg: ClinkConfig = confy::load_path(&config_path)?;
+
+    let cfg: ClinkConfig = load_config(&config_path);
 
     if !config_path.is_file() {
         confy::store_path(&config_path, &cfg)?;
