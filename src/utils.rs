@@ -17,13 +17,7 @@ mod find_and_replace {
         assert_eq!(
             find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
-                &ClinkConfig {
-                    mode: Mode::Remove,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
-                    sleep_duration: 150,
-                    params: get_default_params(),
-                },
+                &ClinkConfig::default(),
                 &create_index(&get_default_params())
             ),
             "https://test.test/"
@@ -33,22 +27,20 @@ mod find_and_replace {
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
                 &ClinkConfig {
                     mode: Mode::YourMom,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
+                    replace_to: "your_mom".to_string(),
                     sleep_duration: 150,
                     params: get_default_params()
                 },
                 &create_index(&get_default_params())
             ),
-            "https://test.test/?fbclid=your_mom&utm_source=your_mom&utm_campaign=your_mom&utm_medium=your_mom"
+            "https://test.test/?utm_source=your_mom"
         );
         assert_ne!(
             find_and_replace(
                 "https://test.test/?fbclid=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_source=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_campaign=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_medium=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs",
                 &ClinkConfig {
                     mode: Mode::Evil,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
+                    replace_to: "your_mom".to_string(),
                     sleep_duration: 150,
                     params: get_default_params()
                 },
@@ -62,13 +54,7 @@ mod find_and_replace {
         assert_eq!(
             find_and_replace(
                 "https://test.test/?abc=abc",
-                &ClinkConfig {
-                    mode: Mode::Remove,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
-                    sleep_duration: 150,
-                    params: get_default_params()
-                },
+                &ClinkConfig::default(),
                 &create_index(&get_default_params())
             ),
             "https://test.test/?abc=abc"
@@ -78,14 +64,13 @@ mod find_and_replace {
                 "https://test.test/?abc=abc",
                 &ClinkConfig {
                     mode: Mode::YourMom,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
+                    replace_to: "your_mom".to_string(),
                     sleep_duration: 150,
                     params: get_default_params()
                 },
                 &create_index(&get_default_params())
             ),
-            "https://test.test/?abc=abc"
+            "https://test.test/?abc=abc&utm_source=your_mom"
         );
     }
     #[test]
@@ -93,13 +78,7 @@ mod find_and_replace {
         assert_eq!(
             find_and_replace(
                 "https://test.test/?abc=abc&fbclid=flksj",
-                &ClinkConfig {
-                    mode: Mode::Remove,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
-                    sleep_duration: 150,
-                    params: get_default_params()
-                },
+                &ClinkConfig::default(),
                 &create_index(&get_default_params())
             ),
             "https://test.test/?abc=abc"
@@ -109,14 +88,13 @@ mod find_and_replace {
                 "https://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig {
                     mode: Mode::YourMom,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
+                    replace_to: "your_mom".to_string(),
                     sleep_duration: 150,
                     params: get_default_params()
                 },
                 &create_index(&get_default_params())
             ),
-            "https://test.test/?abc=abc&fbclid=your_mom"
+            "https://test.test/?abc=abc&utm_source=your_mom"
         );
     }
     #[test]
@@ -124,13 +102,7 @@ mod find_and_replace {
         assert_eq!(
             find_and_replace(
                 "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
-                &ClinkConfig {
-                    mode: Mode::Remove,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
-                    sleep_duration: 150,
-                    params: get_default_params()
-                },
+                &ClinkConfig::default(),
                 &create_index(&get_default_params())
             ),
             "https://test.test/?abc=abc\nhttps://test.test/?abc=abc"
@@ -140,14 +112,13 @@ mod find_and_replace {
                 "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig {
                     mode: Mode::YourMom,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
+                    replace_to: "your_mom".to_string(),
                     sleep_duration: 150,
                     params: get_default_params()
                 },
                 &create_index(&get_default_params())
             ),
-            "https://test.test/?abc=abc&fbclid=your_mom\nhttps://test.test/?abc=abc&fbclid=your_mom"
+            "https://test.test/?abc=abc&utm_source=your_mom\nhttps://test.test/?abc=abc&utm_source=your_mom"
         );
     }
     #[test]
@@ -155,13 +126,7 @@ mod find_and_replace {
         assert_eq!(
             find_and_replace(
                 "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
-                & ClinkConfig {
-                    mode: Mode::Remove,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
-                    sleep_duration: 150,
-                    params: get_default_params()
-                },
+                &ClinkConfig::default(),
                 &create_index(&get_default_params())
             ),
             "some text here https://test.test/?abc=abc here \nand herehttps://test.test/?abc=abc"
@@ -171,25 +136,23 @@ mod find_and_replace {
                 "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig {
                     mode: Mode::YourMom,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
+                    replace_to: "your_mom".to_string(),
                     sleep_duration: 150,
                     params: get_default_params()
                 },
                 &create_index(&get_default_params())
             ),
-            "some text here https://test.test/?abc=abc&fbclid=your_mom here \nand herehttps://test.test/?abc=abc&fbclid=your_mom"
+            "some text here https://test.test/?abc=abc&utm_source=your_mom here \nand herehttps://test.test/?abc=abc&utm_source=your_mom"
         );
     }
     #[test]
-    fn custom_text_for_your_mom_mode() {
+    fn replace() {
         assert_eq!(
             find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
                 &ClinkConfig {
-                    mode: Mode::YourMom,
-                    your_mom: "foo".to_string(),
-                    except_mothers_day: false,
+                    mode: Mode::Replace,
+                    replace_to: "foo".to_string(),
                     sleep_duration: 150,
                     params: get_default_params()
                 },
@@ -205,9 +168,8 @@ mod find_and_replace {
             find_and_replace(
                 "https://test.test/?foo=dsadsa",
                 &ClinkConfig {
-                    mode: Mode::YourMom,
-                    your_mom: "your_mom".to_string(),
-                    except_mothers_day: false,
+                    mode: Mode::Replace,
+                    replace_to: "your_mom".to_string(),
                     sleep_duration: 150,
                     params: vec!["foo".to_string()]
                 },
@@ -248,16 +210,15 @@ fn process_query(
 ) -> Vec<(String, String)> {
     match config.mode {
         Mode::Remove => filter(query, index),
+        Mode::Replace => replace(query, index, config),
         Mode::YourMom => {
-            if config.except_mothers_day {
-                let date = Utc::today();
-                if date.month() == 5 && date.day() == 9 {
-                    filter(query, index)
-                } else {
-                    your_mom(query, index, config)
-                }
+            let date = Utc::today();
+            if date.month() == 5 && date.day() == 9 {
+                filter(query, index)
             } else {
-                your_mom(query, index, config)
+                let mut tmp = filter(query, index);
+                tmp.push(("utm_source".to_string(), "your_mom".to_string()));
+                return tmp;
             }
         }
         Mode::Evil => {
@@ -308,7 +269,7 @@ fn filter(
         .collect()
 }
 
-fn your_mom(
+fn replace(
     query: url::form_urlencoded::Parse<'_>,
     index: &HashMap<String, bool>,
     config: &ClinkConfig,
@@ -316,7 +277,7 @@ fn your_mom(
     query
         .map(|p| {
             if is_hit(&p.0, &index) {
-                (p.0.to_string(), config.your_mom.clone())
+                (p.0.to_string(), config.replace_to.clone())
             } else {
                 (p.0.to_string(), p.1.to_string())
             }
