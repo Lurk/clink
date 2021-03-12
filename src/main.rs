@@ -7,7 +7,7 @@ use params::{create_index, get_default_params};
 use utils::{fallback_config_path, find_and_replace};
 
 use clipboard::{ClipboardContext, ClipboardProvider};
-use dirs::config_dir;
+use dirs_next::config_dir;
 use rustop::opts;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -16,8 +16,7 @@ use std::{path::PathBuf, thread};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClinkConfig {
     mode: Mode,
-    your_mom: String,
-    except_mothers_day: bool,
+    replace_to: String,
     sleep_duration: u64,
     params: Vec<String>,
 }
@@ -26,8 +25,7 @@ impl ::std::default::Default for ClinkConfig {
     fn default() -> Self {
         Self {
             mode: Mode::Remove,
-            your_mom: "your_mom".to_string(),
-            except_mothers_day: true,
+            replace_to: "your_mom".to_string(),
             sleep_duration: 150,
             params: get_default_params(),
         }

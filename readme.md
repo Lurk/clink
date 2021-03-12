@@ -7,7 +7,7 @@ It sits quietly in the background, and if you copy a link to the clipboard, Clin
 
 Path for config file can be altered by -c, --config option.
 Default path:
-* Mac: /Users/Alice/Library/Application Support\clink\config.toml
+* Mac: /Users/Alice/Library/Application Support/clink/config.toml
 * Lin: /home/alice/.config/clink/config.toml
 * Win: C:\Users\Alice\AppData\Roaming\clink\config.toml
 * fallback: current directory/config.toml
@@ -19,12 +19,10 @@ Default config:
 
 ```
 # You can find detail description of modes bellow
-# one of: remove, your_mom, evil
+# one of: remove, replace, your_mom, evil
 mode = 'remove' 
-# Text for your_mom mode  
-your_mom = 'your_mom' 
-# If true in your_mom mode, Clink will automatically switch to the remove mode in Mother's Day. 
-except_mothers_day: true,
+# Text for replace mode  
+replace_to = 'aHR0cHM6Ly95b3V0dS5iZS9kUXc0dzlXZ1hjUQ==' 
 # How often Clink will check clipboard in milliseconds
 sleep_duration = 150
 # Which GET params Clink should update
@@ -45,7 +43,8 @@ params = [
 ## Modes
 
 * remove - removes params from links in clipboard
-* your_mom - Sets values to "your_mom" (inspired by this [tweet](https://twitter.com/ftrain/status/1359138516681314311?s=21))
+* replace - replaces values of params to value from 'replace_to' config param. For example, default value is base64 of a link ;) 
+* your_mom - acts as remove mode and adds utm_source=your_mom, unless it is a Mother's day.(inspired by this [tweet](https://twitter.com/ftrain/status/1359138516681314311?s=21))
 * evil -  swap two random chars in values (Diabolical Laughter)
 
 ## Build

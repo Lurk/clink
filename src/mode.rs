@@ -5,6 +5,8 @@ use std::fmt;
 pub enum Mode {
     #[serde(rename = "remove")]
     Remove,
+    #[serde(rename = "replace")]
+    Replace,
     #[serde(rename = "your_mom")]
     YourMom,
     #[serde(rename = "evil")]
@@ -15,6 +17,7 @@ impl fmt::Display for Mode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Mode::Remove => write!(f, "Remove"),
+            Mode::Replace => write!(f, "Replace"),
             Mode::YourMom => write!(f, "YourMom"),
             Mode::Evil => write!(f, "Evil"),
         }
