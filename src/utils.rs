@@ -218,7 +218,7 @@ fn process_query(
             } else {
                 let mut tmp = filter(query, index);
                 tmp.push(("utm_source".to_string(), "your_mom".to_string()));
-                return tmp;
+                tmp
             }
         }
         Mode::Evil => {

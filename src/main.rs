@@ -12,7 +12,11 @@ use rustop::opts;
 use serde::{Deserialize, Serialize};
 use toml;
 
-use std::{path::PathBuf, process, thread, time::Duration};
+use std::{
+    path::{Path, PathBuf},
+    process, thread,
+    time::Duration,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClinkConfig {
@@ -33,7 +37,7 @@ impl ::std::default::Default for ClinkConfig {
     }
 }
 
-fn load_config(config_path: &PathBuf) -> ClinkConfig {
+fn load_config(config_path: &Path) -> ClinkConfig {
     match confy::load_path(&config_path) {
         Ok(cfg) => cfg,
         Err(e) => {
