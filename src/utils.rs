@@ -2,7 +2,7 @@ use crate::mode::Mode;
 use crate::params::is_hit;
 use crate::ClinkConfig;
 use chrono::prelude::*;
-use linkify::{LinkFinder, LinkKind};
+use linkify::LinkFinder;
 use rand::Rng;
 use std::{collections::HashMap, path::PathBuf};
 use url::Url;
@@ -11,14 +11,19 @@ use url::Url;
 mod find_and_replace {
     use super::*;
     use crate::params::{create_index, get_default_params};
+    use linkify::{LinkFinder, LinkKind};
 
     #[test]
     fn naive() {
+        let mut finder = LinkFinder::new();
+        finder.kinds(&[LinkKind::Url]);
+
         assert_eq!(
             find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
                 &ClinkConfig::default(),
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "https://test.test/"
         );
@@ -31,7 +36,8 @@ mod find_and_replace {
                     sleep_duration: 150,
                     params: get_default_params()
                 },
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "https://test.test/?utm_source=your_mom"
         );
@@ -44,18 +50,22 @@ mod find_and_replace {
                     sleep_duration: 150,
                     params: get_default_params()
                 },
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "https://test.test/?fbclid=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_source=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_campaign=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_medium=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs"
         );
     }
     #[test]
     fn should_preserve_query() {
+        let mut finder = LinkFinder::new();
+        finder.kinds(&[LinkKind::Url]);
         assert_eq!(
             find_and_replace(
                 "https://test.test/?abc=abc",
                 &ClinkConfig::default(),
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "https://test.test/?abc=abc"
         );
@@ -68,18 +78,23 @@ mod find_and_replace {
                     sleep_duration: 150,
                     params: get_default_params()
                 },
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "https://test.test/?abc=abc&utm_source=your_mom"
         );
     }
     #[test]
     fn multiple_params() {
+        let mut finder = LinkFinder::new();
+        finder.kinds(&[LinkKind::Url]);
+
         assert_eq!(
             find_and_replace(
                 "https://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig::default(),
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "https://test.test/?abc=abc"
         );
@@ -92,18 +107,23 @@ mod find_and_replace {
                     sleep_duration: 150,
                     params: get_default_params()
                 },
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "https://test.test/?abc=abc&utm_source=your_mom"
         );
     }
     #[test]
     fn multiple_links() {
+        let mut finder = LinkFinder::new();
+        finder.kinds(&[LinkKind::Url]);
+
         assert_eq!(
             find_and_replace(
                 "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig::default(),
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "https://test.test/?abc=abc\nhttps://test.test/?abc=abc"
         );
@@ -116,18 +136,23 @@ mod find_and_replace {
                     sleep_duration: 150,
                     params: get_default_params()
                 },
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "https://test.test/?abc=abc&utm_source=your_mom\nhttps://test.test/?abc=abc&utm_source=your_mom"
         );
     }
     #[test]
     fn multiple_links_and_text() {
+        let mut finder = LinkFinder::new();
+        finder.kinds(&[LinkKind::Url]);
+
         assert_eq!(
             find_and_replace(
                 "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
                 &ClinkConfig::default(),
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "some text here https://test.test/?abc=abc here \nand herehttps://test.test/?abc=abc"
         );
@@ -140,13 +165,17 @@ mod find_and_replace {
                     sleep_duration: 150,
                     params: get_default_params()
                 },
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "some text here https://test.test/?abc=abc&utm_source=your_mom here \nand herehttps://test.test/?abc=abc&utm_source=your_mom"
         );
     }
     #[test]
     fn replace() {
+        let mut finder = LinkFinder::new();
+        finder.kinds(&[LinkKind::Url]);
+
         assert_eq!(
             find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
@@ -156,7 +185,8 @@ mod find_and_replace {
                     sleep_duration: 150,
                     params: get_default_params()
                 },
-                &create_index(&get_default_params())
+                &create_index(&get_default_params()),
+                &finder
             ),
             "https://test.test/?fbclid=foo&utm_source=foo&utm_campaign=foo&utm_medium=foo"
         );
@@ -164,6 +194,9 @@ mod find_and_replace {
 
     #[test]
     fn custom_params() {
+        let mut finder = LinkFinder::new();
+        finder.kinds(&[LinkKind::Url]);
+
         assert_eq!(
             find_and_replace(
                 "https://test.test/?foo=dsadsa",
@@ -173,16 +206,20 @@ mod find_and_replace {
                     sleep_duration: 150,
                     params: vec!["foo".to_string()]
                 },
-                &create_index(&vec!["foo".to_string()])
+                &create_index(&vec!["foo".to_string()]),
+                &finder
             ),
             "https://test.test/?foo=your_mom"
         );
     }
 }
 
-pub fn find_and_replace(str: &str, config: &ClinkConfig, index: &HashMap<String, bool>) -> String {
-    let mut finder = LinkFinder::new();
-    finder.kinds(&[LinkKind::Url]);
+pub fn find_and_replace(
+    str: &str,
+    config: &ClinkConfig,
+    index: &HashMap<String, bool>,
+    finder: &LinkFinder,
+) -> String {
     let mut res = str.to_string();
     for link in finder.links(str) {
         let l = Url::parse(link.as_str()).unwrap();

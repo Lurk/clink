@@ -10,13 +10,14 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 use dirs_next::config_dir;
 use rustop::opts;
 use serde::{Deserialize, Serialize};
-use toml;
 
 use std::{
     path::{Path, PathBuf},
     process, thread,
     time::Duration,
 };
+
+use linkify::{LinkFinder, LinkKind};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClinkConfig {
@@ -81,11 +82,14 @@ fn main() -> Result<(), confy::ConfyError> {
     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
     let mut previous_clipboard = "".to_string();
     let index = create_index(&cfg.params);
+    let mut finder = LinkFinder::new();
+    finder.kinds(&[LinkKind::Url]);
+
     loop {
         match ctx.get_contents() {
             Ok(current_clipboard) => {
                 if previous_clipboard != current_clipboard {
-                    let cleaned = find_and_replace(&current_clipboard, &cfg, &index);
+                    let cleaned = find_and_replace(&current_clipboard, &cfg, &index, &finder);
                     if cleaned != current_clipboard {
                         ctx.set_contents(cleaned.clone()).unwrap();
                     }
