@@ -45,7 +45,7 @@ dependencies = [
 
 [[package]]
 name = "clink"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "chrono",
  "clipboard",
@@ -62,10 +62,10 @@ dependencies = [
 [[package]]
 name = "clipboard"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25a904646c0340239dcf7c51677b33928bf24fdf424b79a57909c0109075b2e7"
+source = "git+https://github.com/Lurk/rust-clipboard?branch=fix_osx_memory_leak#945d82e57d0e81d7e872ae4c9a99caebf2295d18"
 dependencies = [
  "clipboard-win",
+ "libc",
  "objc",
  "objc-foundation",
  "objc_id",
@@ -168,9 +168,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.97"
+version = "0.2.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12b8adadd720df158f4d70dfe7ccc6adb0472d7c55ca83445f6a5ab3e36f8fb6"
+checksum = "320cfe77175da3a483efed4bc0adc1968ca050b098ce4f2f1c13a56626128790"
 
 [[package]]
 name = "linkify"

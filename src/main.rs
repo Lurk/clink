@@ -84,7 +84,7 @@ fn main() -> Result<(), confy::ConfyError> {
     let index = create_index(&cfg.params);
     let mut finder = LinkFinder::new();
     finder.kinds(&[LinkKind::Url]);
-
+    let sleep_duration = Duration::from_millis(cfg.sleep_duration);
     loop {
         match ctx.get_contents() {
             Ok(current_clipboard) => {
@@ -98,6 +98,6 @@ fn main() -> Result<(), confy::ConfyError> {
             }
             Err(_e) => {}
         }
-        thread::sleep(Duration::from_millis(cfg.sleep_duration))
+        thread::sleep(sleep_duration);
     }
 }
