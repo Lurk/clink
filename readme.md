@@ -51,9 +51,9 @@ params = [
 
 ### Linux
 
-Make sure that you have libxcb-composite0-dev installed 
+Make sure that you have libxkbcommon-dev libxcb-shape0-dev libxcb-xfixes0-dev installed 
 ```
-sudo apt-get install libxcb-composite0-dev
+sudo apt-get install libxkbcommon-dev libxcb-shape0-dev libxcb-xfixes0-dev
 ```
 
 ### MacOs
