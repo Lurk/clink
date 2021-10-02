@@ -313,7 +313,7 @@ fn replace(
 ) -> Vec<(String, String)> {
     query
         .map(|p| {
-            if is_hit(&p.0, &index) {
+            if is_hit(&p.0, index) {
                 (p.0.to_string(), config.replace_to.clone())
             } else {
                 (p.0.to_string(), p.1.to_string())
