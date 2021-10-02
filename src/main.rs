@@ -6,7 +6,7 @@ use mode::Mode;
 use params::{create_index, get_default_params};
 use utils::{fallback_config_path, find_and_replace};
 
-use clipboard::{ClipboardContext, ClipboardProvider};
+use copypasta::{ClipboardContext, ClipboardProvider};
 use dirs_next::config_dir;
 use rustop::opts;
 use serde::{Deserialize, Serialize};
@@ -79,7 +79,7 @@ fn main() -> Result<(), confy::ConfyError> {
         println!("\nConfig ({:?}):\n {:#?}", config_path, cfg);
     }
 
-    let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+    let mut ctx: ClipboardContext = ClipboardContext::new().unwrap();
     let mut previous_clipboard = "".to_string();
     let index = create_index(&cfg.params);
     let mut finder = LinkFinder::new();
