@@ -31,7 +31,7 @@ jobs:
           toolchain: stable    
     - name: Dependencies (Linux)
       if: runner.os == 'Linux'
-      run: sudo apt-get install liblxkbcommon-devel 
+      run: sudo apt-get install libxkbcommon-devel
     - name: build
       uses: actions-rs/cargo@v1
       with:
