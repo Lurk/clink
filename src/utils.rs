@@ -206,7 +206,7 @@ mod find_and_replace {
                     sleep_duration: 150,
                     params: vec!["foo".to_string()]
                 },
-                &create_index(&vec!["foo".to_string()]),
+                &create_index(&["foo".to_string()]),
                 &finder
             ),
             "https://test.test/?foo=your_mom"
