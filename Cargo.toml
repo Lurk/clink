@@ -1,13 +1,13 @@
 [package]
 name = "clink"
 version = "0.6.3"
-authors = ["Sergey Bargamon <sergey@bargamon.ru>"]
-edition = "2018"
+authors = ["Serhiy Barhamon <bargamon@gmail.com>"]
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-copypasta = { git = "https://github.com/Lurk/copypasta.git", branch = "master"  }
+copypasta = "0.8.0"
 linkify = "0.7.0"
 url = "2.2.2"
 rustop = "1.1.1"
