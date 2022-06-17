@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 copypasta = "0.8.0"
-linkify = "0.7.0"
+linkify = "0.8.1"
 url = "2.2.2"
 rustop = "1.1.1"
 rand = "0.8.5"
