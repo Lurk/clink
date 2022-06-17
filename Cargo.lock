@@ -446,9 +446,9 @@ dependencies = [
 
 [[package]]
 name = "rustop"
-version = "1.1.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59a6f317aba7842554266d387a51504f084fc460cab6eb59e19d98dc3d18b9ec"
+checksum = "cac77bea4e5c89acb455a2fe072bc19334cb130691af6e1bed4625d3f5396e89"
 
 [[package]]
 name = "scoped-tls"
