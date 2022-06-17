@@ -10,7 +10,7 @@ edition = "2021"
 copypasta = "0.8.0"
 linkify = "0.8.1"
 url = "2.2.2"
-rustop = "1.1.1"
+rustop = "1.1.2"
 rand = "0.8.5"
 confy="0.4.0"
 serde = { version = "1.0", features = ["derive"] }
