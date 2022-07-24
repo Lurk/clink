@@ -9,15 +9,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04, ubuntu-20.04, ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         config: [Debug, Release]
         include:
           - os: macos-latest
             name: macOS
-          - os: ubuntu-18.04
-            name: Linux
-          - os: ubuntu-20.04
-            name: Linux
           - os: ubuntu-latest
             name: Linux
           - os: windows-latest
