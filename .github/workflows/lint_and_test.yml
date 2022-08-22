@@ -37,6 +37,4 @@ jobs:
       with:
         command: test
     - name: lint
-      uses: actions/checkout@v2
-      with:
-        command: cargo clippy --all -- -D warnings
+      run: cargo clippy --all -- -D warnings
