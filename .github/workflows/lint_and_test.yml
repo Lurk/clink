@@ -37,7 +37,6 @@ jobs:
       with:
         command: test
     - name: lint
-      uses: actions-rs/clippy-check@v1
+      uses: actions/checkout@v2
       with:
-        args:  --all-targets --all-features -- -D warnings
-        token: ${{ secrets.GITHUB_TOKEN }}
+        command: cargo clippy --all -- -D warnings
