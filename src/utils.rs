@@ -249,7 +249,7 @@ fn process_query(
         Mode::Remove => filter(query, index),
         Mode::Replace => replace(query, index, config),
         Mode::YourMom => {
-            let date = Utc::today();
+            let date = Utc::now();
             if date.month() == 5 && date.day() == 9 {
                 filter(query, index)
             } else {

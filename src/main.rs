@@ -39,7 +39,7 @@ impl ::std::default::Default for ClinkConfig {
 }
 
 fn load_config(config_path: &Path) -> ClinkConfig {
-    match confy::load_path(&config_path) {
+    match confy::load_path(config_path) {
         Ok(cfg) => cfg,
         Err(e) => {
             println!("Clink {}\nConfig error\n", env!("CARGO_PKG_VERSION"));
