@@ -44,13 +44,13 @@ fn load_config(config_path: &Path) -> ClinkConfig {
         Err(e) => {
             println!("Clink {}\nConfig error\n", env!("CARGO_PKG_VERSION"));
             println!("looks like you have bad config or config for an old version");
-            println!("Look at: {:?}\n", config_path);
+            println!("Look at: {config_path:?}\n");
             println!(
                 "config should look like this:\n\n{}",
                 toml::to_string(&ClinkConfig::default()).unwrap()
             );
 
-            eprintln!("original error:\n {:#?}", e);
+            eprintln!("original error:\n {e:#?}");
             process::exit(1);
         }
     }
@@ -76,7 +76,7 @@ fn main() -> Result<(), confy::ConfyError> {
 
     if args.verbose {
         println!("Clink {}", env!("CARGO_PKG_VERSION"));
-        println!("\nConfig ({:?}):\n {:#?}", config_path, cfg);
+        println!("\nConfig ({config_path:?}):\n {cfg:#?}");
     }
 
     let mut ctx: ClipboardContext = ClipboardContext::new().unwrap();
