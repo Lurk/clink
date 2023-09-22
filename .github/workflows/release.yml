@@ -23,7 +23,7 @@ jobs:
             asset_name: clink-windows.exe
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
             toolchain: stable         
