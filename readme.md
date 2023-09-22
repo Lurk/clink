@@ -117,7 +117,8 @@ Array of exit links to unwrap. Every element is also an array where first elemen
 expression and all others are query params that can contain exit url.
 
 For example this url: `https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjMuu2zrreBAxUt2gIHHaDVC_gQyCl6BAgqEAM&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ&usg=AOvVaw0aHtehaphMhOCAkCydRLZU&opi=89978449`, 
-will be unwrapped to `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
+
+Will be unwrapped to `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
 
 How does it work? 
 
