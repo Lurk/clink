@@ -54,7 +54,7 @@ params = [
     'utm_term', # Identifies search terms
     'utm_content', # Identifies what specifically was clicked to bring the user to the site
 ]
-# Which exit params in url should be unvrapped
+# Which exit params in URL should be unwrapped
 exit = [
     [
         "vk.com/away.php",
@@ -70,7 +70,7 @@ exit = [
         "next",
     ],
     [
-        "(encrypted.|)google.(at|be|ca|ch|co.(bw|il|uk)|com(|.(ar|au|br|eg|tr|tw))|cl|de|dk|es|fr|nl|pl|se)/url",
+        "(www.|)(encrypted.|)google.(at|be|ca|ch|co.(bw|il|uk)|com(|.(ar|au|br|eg|tr|tw))|cl|de|dk|es|fr|nl|pl|se)/url",
         "url",
     ],
     [
@@ -116,10 +116,10 @@ Array of GET query params to apply chosen mode
 
 ### exit
 
-Array of exit links to unwrap. Every element is also an array where first element is a url in a simplified regular
-expression and all others are query params that can contain exit url.
+Array of exit links to unwrap. Every element is also an array where first element is a URL in a simplified regular
+expression and all others are query params that can contain exit URL.
 
-For example this url: `https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjMuu2zrreBAxUt2gIHHaDVC_gQyCl6BAgqEAM&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ&usg=AOvVaw0aHtehaphMhOCAkCydRLZU&opi=89978449`, 
+For example this URL: `https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjMuu2zrreBAxUt2gIHHaDVC_gQyCl6BAgqEAM&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ&usg=AOvVaw0aHtehaphMhOCAkCydRLZU&opi=89978449`, 
 
 Will be unwrapped to `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
 
