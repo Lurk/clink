@@ -1,6 +1,6 @@
 mod clink;
 mod config;
-mod expand_url;
+mod expand_string;
 mod mode;
 
 use clink::Clink;

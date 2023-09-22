@@ -3,8 +3,9 @@
 /// Example:
 /// "(a.|)foo.(bar|baz.(qux|wux)|sar)(.b|.c)"
 ///
-/// will produce the tree:
+/// Which you can imagine as a graph:
 ///
+///               --------""---------
 ///               |                  |
 ///               a.                 ""
 ///               |                  |
@@ -13,17 +14,18 @@
 ///                 ------foo.------
 ///                 |      |       |
 ///                bar    baz.    sar
-///                 |     / \      |
-///                 |    /   \     |
+///                 |    __|__     |
+///                 |   |     |    |
 ///                 |  qux   wux   |
 ///                 |   |     |    |
 ///                 ----------------
-///                        |
-///                       / \
-///                      .b .c
+///                      __|__
+///                     |     |
+///                    .b    .c
 ///
 ///
 /// which then will be collected into the following vector:
+/// ```
 /// [
 ///     "a.foo.bar.b",
 ///     "a.foo.bar.c",
@@ -42,13 +44,14 @@
 ///     "foo.sar.b",
 ///     "foo.sar.c"
 /// ]
+/// ```
 ///
-/// code:
+/// # Examples
 ///
 /// ```
-/// # use url_cleaner::expand_url::expand_url;
+/// use crate::expand_string::expand_string;
 /// assert_eq!(
-///     expand_url("(a.|)foo.(bar|baz.(qux|wux)|sar)(.b|.c)"),
+///     expand_string("(a.|)foo.(bar|baz.(qux|wux)|sar)(.b|.c)"),
 ///     vec![
 ///         "a.foo.bar.b",
 ///         "a.foo.bar.c",
@@ -69,7 +72,7 @@
 ///     ]
 /// );
 /// ```
-pub fn expand_url(str: &str) -> Vec<String> {
+pub fn expand_string(str: &str) -> Vec<String> {
     let mut expander: Expander = Expander::new();
     let mut accumulator: String = String::new();
     let mut just_closed: bool = false;
@@ -167,22 +170,22 @@ impl Expander {
 
 #[cfg(test)]
 mod expand_url {
-    use crate::expand_url::expand_url;
+    use crate::expand_string::expand_string;
 
     #[test]
     fn no_groups() {
-        assert_eq!(expand_url("foo"), vec!["foo"]);
+        assert_eq!(expand_string("foo"), vec!["foo"]);
     }
 
     #[test]
     fn one_group() {
-        assert_eq!(expand_url("foo.(bar|baz)"), vec!["foo.bar", "foo.baz"]);
+        assert_eq!(expand_string("foo.(bar|baz)"), vec!["foo.bar", "foo.baz"]);
     }
 
     #[test]
     fn nested_groups() {
         assert_eq!(
-            expand_url("foo.(bar|baz.(qux|wux)|sar)"),
+            expand_string("foo.(bar|baz.(qux|wux)|sar)"),
             vec!["foo.bar", "foo.baz.qux", "foo.baz.wux", "foo.sar"]
         );
     }
@@ -190,7 +193,7 @@ mod expand_url {
     #[test]
     fn start_group() {
         assert_eq!(
-            expand_url("(a.|)foo.(bar|baz.(qux|wux)|sar)(.b|.c)"),
+            expand_string("(a.|)foo.(bar|baz.(qux|wux)|sar)(.b|.c)"),
             vec![
                 "a.foo.bar.b",
                 "a.foo.bar.c",
@@ -215,7 +218,7 @@ mod expand_url {
     #[test]
     fn empty_node() {
         assert_eq!(
-            expand_url("foo(|.bar|.baz)"),
+            expand_string("foo(|.bar|.baz)"),
             vec!["foo", "foo.bar", "foo.baz"]
         );
     }

@@ -1,4 +1,4 @@
-use crate::expand_url::expand_url;
+use crate::expand_string::expand_string;
 use crate::mode::Mode;
 use crate::ClinkConfig;
 use chrono::prelude::*;
@@ -137,7 +137,7 @@ fn create_index(vec: &[Rc<str>]) -> HashMap<Rc<str>, bool> {
 fn build_exit_map(input: &[Vec<Rc<str>>]) -> HashMap<Rc<str>, Rc<[Rc<str>]>> {
     let mut map: HashMap<Rc<str>, Rc<[Rc<str>]>> = HashMap::new();
     for row in input.iter() {
-        let expanded = expand_url(&row[0]);
+        let expanded = expand_string(&row[0]);
         for url in expanded.into_iter() {
             map.insert(url.into(), row[1..].to_vec().into());
         }
