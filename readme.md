@@ -1,4 +1,7 @@
 # Clink
+
+[![codecov](https://codecov.io/gh/Lurk/clink/graph/badge.svg?token=8GDMOGEL4C)](https://codecov.io/gh/Lurk/clink)
+
 Have you ever pasted a link in messenger and deleted all those fbclid, utm_source, and so on, GET params by hands? Clink does that for you.
 
 It sits quietly in the background, and if you copy a link to the clipboard, Clink automatically removes those params for you.
