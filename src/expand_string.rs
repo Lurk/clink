@@ -1,4 +1,4 @@
-/// Expands url with groups.
+/// Expands string with groups.
 ///
 /// Example:
 /// "(a.|)foo.(bar|baz.(qux|wux)|sar)(.b|.c)"
