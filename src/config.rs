@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     path::{Path, PathBuf},
     process,
     rc::Rc,
@@ -8,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::mode::Mode;
 
-fn get_default_params() -> Vec<Rc<str>> {
-    vec![
+fn get_default_params() -> HashSet<Rc<str>> {
+    HashSet::from([
         "fbclid".into(),
         "gclid".into(),
         "gclsrc".into(),
@@ -20,7 +21,7 @@ fn get_default_params() -> Vec<Rc<str>> {
         "utm_medium".into(),
         "utm_term".into(),
         "utm_content".into(),
-    ]
+    ])
 }
 
 fn get_default_exit() -> Vec<Vec<Rc<str>>> {
@@ -41,7 +42,7 @@ pub struct ClinkConfig {
     pub mode: Mode,
     pub replace_to: String,
     pub sleep_duration: u64,
-    pub params: Vec<Rc<str>>,
+    pub params: HashSet<Rc<str>>,
     pub exit: Vec<Vec<Rc<str>>>,
 }
 

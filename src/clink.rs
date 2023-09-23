@@ -10,21 +10,18 @@ use url::Url;
 
 pub struct Clink {
     config: ClinkConfig,
-    index: HashMap<Rc<str>, bool>,
     exit_map: HashMap<Rc<str>, Rc<[Rc<str>]>>,
     finder: LinkFinder,
 }
 
 impl Clink {
     pub fn new(config: ClinkConfig) -> Self {
-        let index = create_index(&config.params);
         let exit_map = build_exit_map(&config.exit);
         let mut finder = LinkFinder::new();
         finder.kinds(&[LinkKind::Url]);
 
         Clink {
             config,
-            index,
             exit_map,
             finder,
         }
@@ -63,7 +60,7 @@ impl Clink {
                 let mut rng = rand::thread_rng();
                 query
                     .map(|p| {
-                        if self.index.contains_key::<Rc<str>>(&p.0.clone().into()) {
+                        if self.config.params.contains::<Rc<str>>(&p.0.clone().into()) {
                             (
                                 p.0.to_string(),
                                 swap_two_chars(
@@ -83,7 +80,7 @@ impl Clink {
 
     fn filter(&self, query: url::form_urlencoded::Parse<'_>) -> Vec<(String, String)> {
         query
-            .filter(|p| !self.index.contains_key::<Rc<str>>(&p.0.clone().into()))
+            .filter(|p| !self.config.params.contains::<Rc<str>>(&p.0.clone().into()))
             .map(|p| (p.0.to_string(), p.1.to_string()))
             .collect()
     }
@@ -91,7 +88,7 @@ impl Clink {
     fn replace(&self, query: url::form_urlencoded::Parse<'_>) -> Vec<(String, String)> {
         query
             .map(|p| {
-                if self.index.contains_key::<Rc<str>>(&p.0.clone().into()) {
+                if self.config.params.contains::<Rc<str>>(&p.0.clone().into()) {
                     (p.0.to_string(), self.config.replace_to.clone())
                 } else {
                     (p.0.to_string(), p.1.to_string())
@@ -126,14 +123,6 @@ fn join_url(domain: &str, path: &str) -> Rc<str> {
     format!("{}{}", domain, path).into()
 }
 
-fn create_index(vec: &[Rc<str>]) -> HashMap<Rc<str>, bool> {
-    let mut map: HashMap<Rc<str>, bool> = HashMap::new();
-    for key in vec.iter().cloned() {
-        map.insert(key, true);
-    }
-    map
-}
-
 fn build_exit_map(input: &[Vec<Rc<str>>]) -> HashMap<Rc<str>, Rc<[Rc<str>]>> {
     let mut map: HashMap<Rc<str>, Rc<[Rc<str>]>> = HashMap::new();
     for row in input.iter() {
@@ -147,6 +136,8 @@ fn build_exit_map(input: &[Vec<Rc<str>>]) -> HashMap<Rc<str>, Rc<[Rc<str>]>> {
 
 #[cfg(test)]
 mod find_and_replace {
+
+    use std::collections::HashSet;
 
     use super::*;
 
@@ -260,7 +251,7 @@ mod find_and_replace {
             mode: Mode::Replace,
             replace_to: "clink".to_string(),
             sleep_duration: 150,
-            params: vec!["foo".into()],
+            params: HashSet::from(["foo".into()]),
             exit: vec![],
         });
         assert_eq!(
