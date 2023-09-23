@@ -102,12 +102,15 @@ impl Clink {
         let domain = l.domain().unwrap_or("");
         let path = join_url(domain, l.path());
         if let Some(params) = self.exit_map.get(&path) {
-            return l
+            let exit = l
                 .query_pairs()
                 .filter(|p| params.contains(&p.0.clone().into()))
                 .map(|p| p.1.to_string())
                 .take(1)
                 .collect::<String>();
+            if !exit.is_empty() {
+                return exit;
+            }
         }
         url.to_string()
     }
@@ -270,8 +273,8 @@ mod unwrap_exit_params {
         let clink = Clink::new(ClinkConfig::default());
         assert_eq!(
             clink.unwrap_exit_params(
-        "https://exit.sc/?url=https%3A%2F%2Fopen.spotify.com%2Fartist%2F3tEV3J5gW5BDMrJqE3NaBy%3Fsi%3D1mLk6MZSRGuol8rgwCe_Cg"
-        ),
+                "https://exit.sc/?url=https%3A%2F%2Fopen.spotify.com%2Fartist%2F3tEV3J5gW5BDMrJqE3NaBy%3Fsi%3D1mLk6MZSRGuol8rgwCe_Cg"
+            ),
             "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
         );
 
@@ -291,6 +294,15 @@ mod unwrap_exit_params {
                 "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
             ),
             "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
+        );
+    }
+
+    #[test]
+    fn has_exit_url_but_no_exit_param() {
+        let clink = Clink::new(ClinkConfig::default());
+        assert_eq!(
+            clink.unwrap_exit_params("https://exit.sc/?foo=bar"),
+            "https://exit.sc/?foo=bar"
         );
     }
 }
