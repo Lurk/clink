@@ -22,7 +22,8 @@ fn main() -> Result<(), confy::ConfyError> {
 
     let config_path = PathBuf::from(args.config);
 
-    let cfg: ClinkConfig = load_config(&config_path);
+    let mut cfg: ClinkConfig = load_config(&config_path);
+    cfg.verbose = args.verbose;
 
     if !config_path.is_file() {
         confy::store_path(&config_path, &cfg)?;
