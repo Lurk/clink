@@ -20,6 +20,10 @@ impl Clink {
         let mut finder = LinkFinder::new();
         finder.kinds(&[LinkKind::Url]);
 
+        if config.verbose {
+            println!("Exit map: {exit_map:#?}")
+        }
+
         Clink {
             config,
             exit_map,
@@ -256,6 +260,7 @@ mod find_and_replace {
             sleep_duration: 150,
             params: HashSet::from(["foo".into()]),
             exit: vec![],
+            verbose: false,
         });
         assert_eq!(
             clink.find_and_replace("https://test.test/?foo=dsadsa",),

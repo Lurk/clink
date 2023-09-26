@@ -44,6 +44,8 @@ pub struct ClinkConfig {
     pub sleep_duration: u64,
     pub params: HashSet<Rc<str>>,
     pub exit: Vec<Vec<Rc<str>>>,
+    #[serde(skip)]
+    pub verbose: bool,
 }
 
 impl ClinkConfig {
@@ -54,6 +56,7 @@ impl ClinkConfig {
             sleep_duration: 150,
             params: get_default_params(),
             exit: get_default_exit(),
+            verbose: false,
         }
     }
 }
