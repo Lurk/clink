@@ -1,0 +1,28 @@
+[Unit]
+Description=Clean links copied to clipboard
+Documentation=https://github.com/Lurk/clink?tab=readme-ov-file#readme
+
+[Service]
+ExecStart=/usr/bin/clink
+# Sandboxing and other hardening
+NoNewPrivileges=yes
+ProtectProc=noaccess
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+ProtectSystem=strict
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictFileSystems=~@privileged-api
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+
+[Install]
+WantedBy=default.target
