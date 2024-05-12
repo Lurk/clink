@@ -21,6 +21,8 @@ fn get_default_params() -> HashSet<Rc<str>> {
         "utm_medium".into(),
         "utm_term".into(),
         "utm_content".into(),
+        "youtube.com``si".into(),
+        "youtu.be``si".into(),
     ])
 }
 
