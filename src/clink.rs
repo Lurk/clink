@@ -297,8 +297,43 @@ mod find_and_replace {
         );
 
         assert_eq!(
+            clink.find_and_replace("https://youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69&fbclid=clid",),
+            "https://youtu.be/dQw4w9WgXcQ?t=69"
+        );
+
+        assert_eq!(
             clink.find_and_replace("https://test.test/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69",),
             "https://test.test/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69"
+        );
+
+        let clink = Clink::new(ClinkConfig::new(Mode::Replace));
+        assert_eq!(
+            clink.find_and_replace(
+                "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa&si=qweasd",
+            ),
+            "https://test.test/?fbclid=clink&utm_source=clink&utm_campaign=clink&utm_medium=clink&si=qweasd"
+        );
+
+        assert_eq!(
+            clink.find_and_replace(
+                "https://youtu.be/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa&si=qweasd",
+            ),
+            "https://youtu.be/?fbclid=clink&utm_source=clink&utm_campaign=clink&utm_medium=clink&si=clink"
+        );
+
+        let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
+        assert_eq!(
+            clink.find_and_replace(
+                "https://test.test/?si=dsadsa",
+            ),
+            "https://test.test/?si=dsadsa&utm_source=your_mom"
+        );
+
+        assert_eq!(
+            clink.find_and_replace(
+                "https://youtu.be/?si=dsadsa",
+            ),
+            "https://youtu.be/?utm_source=your_mom"
         );
     }
 }
