@@ -6,7 +6,6 @@ use linkify::{LinkFinder, LinkKind};
 use rand::Rng;
 use std::collections::HashMap;
 use std::rc::Rc;
-use url::form_urlencoded::Parse;
 use url::Url;
 
 pub struct Clink {
@@ -38,7 +37,7 @@ impl Clink {
             let mut l = Url::parse(self.unwrap_exit_params(link.as_str()).as_str())
                 .expect("url to be parsable");
             let query = self.process_query(
-                l.query_pairs(),
+                l.query_pairs().map(|(k, v)| (k.to_string(), v.to_string())),
                 l.domain().map(|d| d.strip_prefix("www.").unwrap_or(d)),
             );
             l.set_query(None);
@@ -53,7 +52,11 @@ impl Clink {
         res
     }
 
-    fn process_query(&self, query: Parse<'_>, domain: Option<&str>) -> Vec<(String, String)> {
+    fn process_query(
+        &self,
+        query: impl Iterator<Item = (String, String)>,
+        domain: Option<&str>,
+    ) -> Vec<(String, String)> {
         match self.config.mode {
             Mode::Remove => self.filter(query, domain),
             Mode::Replace => self.replace(query, domain),
@@ -90,23 +93,29 @@ impl Clink {
         }
     }
 
-    fn filter(&self, query: Parse<'_>, domain: Option<&str>) -> Vec<(String, String)> {
+    fn filter(
+        &self,
+        query: impl Iterator<Item = (String, String)>,
+        domain: Option<&str>,
+    ) -> Vec<(String, String)> {
         query
             .filter(|(key, _)| {
-                !self.config.params.contains(&key.to_string())
+                !self.config.params.contains(key)
                     && if let Some(domain) = domain {
                         return !self.config.params.contains(&format!("{domain}``{key}"));
                     } else {
                         true
                     }
             })
-            .map(|(key, value)| (key.to_string(), value.to_string()))
             .collect()
     }
 
-    fn replace(&self, query: Parse<'_>, domain: Option<&str>) -> Vec<(String, String)> {
+    fn replace(
+        &self,
+        query: impl Iterator<Item = (String, String)>,
+        domain: Option<&str>,
+    ) -> Vec<(String, String)> {
         query
-            .map(|(key, value)| (key.to_string(), value.to_string()))
             .map(|(key, value)| {
                 if self.config.params.contains(&key) {
                     (key, self.config.replace_to.clone())
