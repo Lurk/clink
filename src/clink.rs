@@ -41,7 +41,7 @@ impl Clink {
                 l.domain().map(|d| d.strip_prefix("www.").unwrap_or(d)),
             );
             l.set_query(None);
-            {
+            if !query.is_empty() {
                 let mut query_pairs = l.query_pairs_mut();
                 for (key, value) in query {
                     query_pairs.append_pair(key.as_str(), value.as_str());
