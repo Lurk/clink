@@ -9,6 +9,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::mode::Mode;
 
+/// add query param, that must be replaced within any domain
+/// to specify domain specific params use format
+/// "{domain}``{param}"
 fn get_default_params() -> HashSet<Rc<str>> {
     HashSet::from([
         "fbclid".into(),

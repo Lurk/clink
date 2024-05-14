@@ -35,7 +35,13 @@ impl Clink {
         let mut res = str.to_string();
         for link in self.finder.links(str) {
             let mut l = Url::parse(self.unwrap_exit_params(link.as_str()).as_str()).unwrap();
-            let query: Vec<(_, _)> = self.process_query(l.query_pairs(),l.domain());
+            let query: Vec<(_, _)> = self.process_query(
+                l.query_pairs(),
+                l.domain()
+                    .unwrap_or_default()
+                    .strip_prefix("www.")
+                    .or(l.domain()),
+            );
             l.set_query(None);
             for pair in query {
                 l.query_pairs_mut()
@@ -46,7 +52,11 @@ impl Clink {
         res
     }
 
-    fn process_query(&self, query: url::form_urlencoded::Parse<'_>, domain: Option<&str>) -> Vec<(String, String)> {
+    fn process_query(
+        &self,
+        query: url::form_urlencoded::Parse<'_>,
+        domain: Option<&str>,
+    ) -> Vec<(String, String)> {
         match self.config.mode {
             Mode::Remove => self.filter(query, domain),
             Mode::Replace => self.replace(query, domain),
@@ -82,21 +92,31 @@ impl Clink {
         }
     }
 
-    fn filter(&self, query: url::form_urlencoded::Parse<'_>, domain: Option<&str>) -> Vec<(String, String)> {
+    fn filter(
+        &self,
+        query: url::form_urlencoded::Parse<'_>,
+        domain: Option<&str>,
+    ) -> Vec<(String, String)> {
         query
             .filter(|p| {
                 let global_absent = !self.config.params.contains::<Rc<str>>(&p.0.clone().into());
-                return global_absent &&
-                    if let Some(domain_val) = domain {
+                global_absent
+                    && if let Some(domain_val) = domain {
                         let param_name = format!("{}``{}", domain_val, p.0);
                         return !self.config.params.contains::<Rc<str>>(&param_name.into());
-                    } else {true}
+                    } else {
+                        true
+                    }
             })
             .map(|p| (p.0.to_string(), p.1.to_string()))
             .collect()
     }
 
-    fn replace(&self, query: url::form_urlencoded::Parse<'_>, domain: Option<&str>) -> Vec<(String, String)> {
+    fn replace(
+        &self,
+        query: url::form_urlencoded::Parse<'_>,
+        domain: Option<&str>,
+    ) -> Vec<(String, String)> {
         query
             .map(|p| {
                 if self.config.params.contains::<Rc<str>>(&p.0.clone().into()) {
@@ -292,12 +312,19 @@ mod find_and_replace {
         );
 
         assert_eq!(
+            clink.find_and_replace("https://www.youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH",),
+            "https://www.youtu.be/dQw4w9WgXcQ"
+        );
+
+        assert_eq!(
             clink.find_and_replace("https://youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69",),
             "https://youtu.be/dQw4w9WgXcQ?t=69"
         );
 
         assert_eq!(
-            clink.find_and_replace("https://youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69&fbclid=clid",),
+            clink.find_and_replace(
+                "https://youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69&fbclid=clid",
+            ),
             "https://youtu.be/dQw4w9WgXcQ?t=69"
         );
 
@@ -323,16 +350,12 @@ mod find_and_replace {
 
         let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
         assert_eq!(
-            clink.find_and_replace(
-                "https://test.test/?si=dsadsa",
-            ),
+            clink.find_and_replace("https://test.test/?si=dsadsa",),
             "https://test.test/?si=dsadsa&utm_source=your_mom"
         );
 
         assert_eq!(
-            clink.find_and_replace(
-                "https://youtu.be/?si=dsadsa",
-            ),
+            clink.find_and_replace("https://youtu.be/?si=dsadsa",),
             "https://youtu.be/?utm_source=your_mom"
         );
     }
