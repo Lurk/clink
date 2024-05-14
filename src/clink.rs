@@ -70,18 +70,19 @@ impl Clink {
             Mode::Evil => {
                 let mut rng = rand::thread_rng();
                 query
+                    .map(|(key, value)| (key.to_string(), value.to_string()))
                     .map(|(key, value)| {
-                        if self.config.params.contains(&key.to_string()) {
+                        if self.config.params.contains(&key) {
                             (
-                                key.to_string(),
+                                key,
                                 swap_two_chars(
                                     &value,
-                                    rng.gen_range(0..value.to_string().len()),
-                                    rng.gen_range(0..value.to_string().len()),
+                                    rng.gen_range(0..value.len()),
+                                    rng.gen_range(0..value.len()),
                                 ),
                             )
                         } else {
-                            (key.to_string(), value.to_string())
+                            (key, value)
                         }
                     })
                     .collect()
@@ -105,17 +106,18 @@ impl Clink {
 
     fn replace(&self, query: Parse<'_>, domain: Option<&str>) -> Vec<(String, String)> {
         query
+            .map(|(key, value)| (key.to_string(), value.to_string()))
             .map(|(key, value)| {
-                if self.config.params.contains(&key.to_string()) {
-                    (key.to_string(), self.config.replace_to.clone())
+                if self.config.params.contains(&key) {
+                    (key, self.config.replace_to.clone())
                 } else if let Some(domain) = domain {
                     if self.config.params.contains(&format!("{domain}``{key}")) {
-                        (key.to_string(), self.config.replace_to.clone())
+                        (key, self.config.replace_to.clone())
                     } else {
-                        (key.to_string(), value.to_string())
+                        (key, value)
                     }
                 } else {
-                    (key.to_string(), value.to_string())
+                    (key, value)
                 }
             })
             .collect()
