@@ -34,18 +34,18 @@ impl Clink {
     pub fn find_and_replace(&self, str: &str) -> String {
         let mut res = str.to_string();
         for link in self.finder.links(str) {
-            let mut l = Url::parse(self.unwrap_exit_params(link.as_str()).as_str()).unwrap();
-            let query: Vec<(_, _)> = self.process_query(
+            let mut l = Url::parse(self.unwrap_exit_params(link.as_str()).as_str())
+                .expect("url to be parsable");
+            let query = self.process_query(
                 l.query_pairs(),
-                l.domain()
-                    .unwrap_or_default()
-                    .strip_prefix("www.")
-                    .or(l.domain()),
+                l.domain().map(|d| d.strip_prefix("www.").unwrap_or(d)),
             );
             l.set_query(None);
-            for pair in query {
-                l.query_pairs_mut()
-                    .append_pair(&pair.0.to_string()[..], &pair.1.to_string()[..]);
+            {
+                let mut query_pairs = l.query_pairs_mut();
+                for (key, value) in query {
+                    query_pairs.append_pair(key.as_str(), value.as_str());
+                }
             }
             res = res.replace(link.as_str(), l.as_str());
         }
