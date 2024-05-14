@@ -12,7 +12,7 @@ use crate::mode::Mode;
 /// add query param, that must be replaced within any domain
 /// to specify domain specific params use format
 /// "{domain}``{param}"
-fn get_default_params() -> HashSet<Rc<str>> {
+fn get_default_params() -> HashSet<String> {
     HashSet::from([
         "fbclid".into(),
         "gclid".into(),
@@ -47,7 +47,7 @@ pub struct ClinkConfig {
     pub mode: Mode,
     pub replace_to: String,
     pub sleep_duration: u64,
-    pub params: HashSet<Rc<str>>,
+    pub params: HashSet<String>,
     pub exit: Vec<Vec<Rc<str>>>,
     #[serde(skip)]
     pub verbose: bool,

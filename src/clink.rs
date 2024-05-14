@@ -6,6 +6,7 @@ use linkify::{LinkFinder, LinkKind};
 use rand::Rng;
 use std::collections::HashMap;
 use std::rc::Rc;
+use url::form_urlencoded::Parse;
 use url::Url;
 
 pub struct Clink {
@@ -52,11 +53,7 @@ impl Clink {
         res
     }
 
-    fn process_query(
-        &self,
-        query: url::form_urlencoded::Parse<'_>,
-        domain: Option<&str>,
-    ) -> Vec<(String, String)> {
+    fn process_query(&self, query: Parse<'_>, domain: Option<&str>) -> Vec<(String, String)> {
         match self.config.mode {
             Mode::Remove => self.filter(query, domain),
             Mode::Replace => self.replace(query, domain),
@@ -73,18 +70,18 @@ impl Clink {
             Mode::Evil => {
                 let mut rng = rand::thread_rng();
                 query
-                    .map(|p| {
-                        if self.config.params.contains::<Rc<str>>(&p.0.clone().into()) {
+                    .map(|(key, value)| {
+                        if self.config.params.contains(&key.to_string()) {
                             (
-                                p.0.to_string(),
+                                key.to_string(),
                                 swap_two_chars(
-                                    &p.1,
-                                    rng.gen_range(0..p.1.to_string().len()),
-                                    rng.gen_range(0..p.1.to_string().len()),
+                                    &value,
+                                    rng.gen_range(0..value.to_string().len()),
+                                    rng.gen_range(0..value.to_string().len()),
                                 ),
                             )
                         } else {
-                            (p.0.to_string(), p.1.to_string())
+                            (key.to_string(), value.to_string())
                         }
                     })
                     .collect()
@@ -92,44 +89,33 @@ impl Clink {
         }
     }
 
-    fn filter(
-        &self,
-        query: url::form_urlencoded::Parse<'_>,
-        domain: Option<&str>,
-    ) -> Vec<(String, String)> {
+    fn filter(&self, query: Parse<'_>, domain: Option<&str>) -> Vec<(String, String)> {
         query
-            .filter(|p| {
-                let global_absent = !self.config.params.contains::<Rc<str>>(&p.0.clone().into());
-                global_absent
-                    && if let Some(domain_val) = domain {
-                        let param_name = format!("{}``{}", domain_val, p.0);
-                        return !self.config.params.contains::<Rc<str>>(&param_name.into());
+            .filter(|(key, _)| {
+                !self.config.params.contains(&key.to_string())
+                    && if let Some(domain) = domain {
+                        return !self.config.params.contains(&format!("{domain}``{key}"));
                     } else {
                         true
                     }
             })
-            .map(|p| (p.0.to_string(), p.1.to_string()))
+            .map(|(key, value)| (key.to_string(), value.to_string()))
             .collect()
     }
 
-    fn replace(
-        &self,
-        query: url::form_urlencoded::Parse<'_>,
-        domain: Option<&str>,
-    ) -> Vec<(String, String)> {
+    fn replace(&self, query: Parse<'_>, domain: Option<&str>) -> Vec<(String, String)> {
         query
-            .map(|p| {
-                if self.config.params.contains::<Rc<str>>(&p.0.clone().into()) {
-                    (p.0.to_string(), self.config.replace_to.clone())
-                } else if let Some(domain_val) = domain {
-                    let param_name = format!("{}``{}", domain_val, p.0);
-                    if self.config.params.contains::<Rc<str>>(&param_name.into()) {
-                        (p.0.to_string(), self.config.replace_to.clone())
+            .map(|(key, value)| {
+                if self.config.params.contains(&key.to_string()) {
+                    (key.to_string(), self.config.replace_to.clone())
+                } else if let Some(domain) = domain {
+                    if self.config.params.contains(&format!("{domain}``{key}")) {
+                        (key.to_string(), self.config.replace_to.clone())
                     } else {
-                        (p.0.to_string(), p.1.to_string())
+                        (key.to_string(), value.to_string())
                     }
                 } else {
-                    (p.0.to_string(), p.1.to_string())
+                    (key.to_string(), value.to_string())
                 }
             })
             .collect()
