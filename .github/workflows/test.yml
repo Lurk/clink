@@ -56,13 +56,13 @@ jobs:
         run: cargo test --locked --all-features --all-targets
   coverage:
     runs-on: ubuntu-latest
-    name: ubuntu / stable / coverage
+    name: ubuntu / nightly / coverage
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install nightly
+        uses: dtolnay/rust-toolchain@nightly
         with:
           components: llvm-tools-preview
       - name: cargo install cargo-llvm-cov
