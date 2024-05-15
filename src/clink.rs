@@ -34,18 +34,18 @@ impl Clink {
     pub fn find_and_replace(&self, str: &str) -> String {
         let mut res = str.to_string();
         for link in self.finder.links(str) {
-            let mut l = Url::parse(self.unwrap_exit_params(link.as_str()).as_str()).unwrap();
-            let query: Vec<(_, _)> = self.process_query(
-                l.query_pairs(),
-                l.domain()
-                    .unwrap_or_default()
-                    .strip_prefix("www.")
-                    .or(l.domain()),
+            let mut l = Url::parse(self.unwrap_exit_params(link.as_str()).as_str())
+                .expect("url to be parsable");
+            let query = self.process_query(
+                l.query_pairs().map(|(k, v)| (k.to_string(), v.to_string())),
+                l.domain().map(|d| d.strip_prefix("www.").unwrap_or(d)),
             );
             l.set_query(None);
-            for pair in query {
-                l.query_pairs_mut()
-                    .append_pair(&pair.0.to_string()[..], &pair.1.to_string()[..]);
+            if !query.is_empty() {
+                let mut query_pairs = l.query_pairs_mut();
+                for (key, value) in query {
+                    query_pairs.append_pair(key.as_str(), value.as_str());
+                }
             }
             res = res.replace(link.as_str(), l.as_str());
         }
@@ -54,7 +54,7 @@ impl Clink {
 
     fn process_query(
         &self,
-        query: url::form_urlencoded::Parse<'_>,
+        query: impl Iterator<Item = (String, String)>,
         domain: Option<&str>,
     ) -> Vec<(String, String)> {
         match self.config.mode {
@@ -73,18 +73,18 @@ impl Clink {
             Mode::Evil => {
                 let mut rng = rand::thread_rng();
                 query
-                    .map(|p| {
-                        if self.config.params.contains::<Rc<str>>(&p.0.clone().into()) {
+                    .map(|(key, value)| {
+                        if self.config.params.contains(&key) {
                             (
-                                p.0.to_string(),
+                                key,
                                 swap_two_chars(
-                                    &p.1,
-                                    rng.gen_range(0..p.1.to_string().len()),
-                                    rng.gen_range(0..p.1.to_string().len()),
+                                    &value,
+                                    rng.gen_range(0..value.len()),
+                                    rng.gen_range(0..value.len()),
                                 ),
                             )
                         } else {
-                            (p.0.to_string(), p.1.to_string())
+                            (key, value)
                         }
                     })
                     .collect()
@@ -94,42 +94,36 @@ impl Clink {
 
     fn filter(
         &self,
-        query: url::form_urlencoded::Parse<'_>,
+        query: impl Iterator<Item = (String, String)>,
         domain: Option<&str>,
     ) -> Vec<(String, String)> {
         query
-            .filter(|p| {
-                let global_absent = !self.config.params.contains::<Rc<str>>(&p.0.clone().into());
-                global_absent
-                    && if let Some(domain_val) = domain {
-                        let param_name = format!("{}``{}", domain_val, p.0);
-                        return !self.config.params.contains::<Rc<str>>(&param_name.into());
-                    } else {
-                        true
-                    }
+            .filter(|(key, _)| {
+                !self.config.params.contains(key)
+                    && domain
+                        .map(|d| !self.config.params.contains(&format!("{d}``{key}")))
+                        .unwrap_or(true)
             })
-            .map(|p| (p.0.to_string(), p.1.to_string()))
             .collect()
     }
 
     fn replace(
         &self,
-        query: url::form_urlencoded::Parse<'_>,
+        query: impl Iterator<Item = (String, String)>,
         domain: Option<&str>,
     ) -> Vec<(String, String)> {
         query
-            .map(|p| {
-                if self.config.params.contains::<Rc<str>>(&p.0.clone().into()) {
-                    (p.0.to_string(), self.config.replace_to.clone())
-                } else if let Some(domain_val) = domain {
-                    let param_name = format!("{}``{}", domain_val, p.0);
-                    if self.config.params.contains::<Rc<str>>(&param_name.into()) {
-                        (p.0.to_string(), self.config.replace_to.clone())
+            .map(|(key, value)| {
+                if self.config.params.contains(&key) {
+                    (key, self.config.replace_to.clone())
+                } else if let Some(domain) = domain {
+                    if self.config.params.contains(&format!("{domain}``{key}")) {
+                        (key, self.config.replace_to.clone())
                     } else {
-                        (p.0.to_string(), p.1.to_string())
+                        (key, value)
                     }
                 } else {
-                    (p.0.to_string(), p.1.to_string())
+                    (key, value)
                 }
             })
             .collect()
