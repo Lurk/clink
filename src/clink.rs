@@ -73,7 +73,6 @@ impl Clink {
             Mode::Evil => {
                 let mut rng = rand::thread_rng();
                 query
-                    .map(|(key, value)| (key.to_string(), value.to_string()))
                     .map(|(key, value)| {
                         if self.config.params.contains(&key) {
                             (
@@ -101,11 +100,9 @@ impl Clink {
         query
             .filter(|(key, _)| {
                 !self.config.params.contains(key)
-                    && if let Some(domain) = domain {
-                        return !self.config.params.contains(&format!("{domain}``{key}"));
-                    } else {
-                        true
-                    }
+                    && domain
+                        .map(|d| !self.config.params.contains(&format!("{d}``{key}")))
+                        .unwrap_or(true)
             })
             .collect()
     }
