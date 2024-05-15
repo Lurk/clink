@@ -9,11 +9,11 @@ edition = "2021"
 [dependencies]
 copypasta = "=0.10.1"
 linkify = "=0.10.0"
-url = "=2.4.1"
-rustop = "=1.1.2"
+url = "=2.5.0"
+rustop = "=1.1.4"
 rand = "=0.8.5"
-confy = "=0.5.1"
-serde = { version = "=1.0.188", features = ["derive", "rc"] }
-chrono = "=0.4.31"
+confy = "=0.6.1"
+serde = { version = "=1.0.202", features = ["derive", "rc"] }
+chrono = "=0.4.38"
 dirs-next = "=2.0.0"
-toml = "=0.8.0"
+toml = "=0.8.13"
