@@ -7,13 +7,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-copypasta = "0.10.1"
-linkify = "0.10.0"
-url = "2.5.0"
-rustop = "1.1.4"
-rand = "0.8.5"
-confy = "0.6.1"
+copypasta = "=0.10.1"
+linkify = "=0.10.0"
+url = "=2.5.0"
+rustop = "=1.1.4"
+rand = "=0.8.5"
+confy = "=0.6.0"
 serde = { version = "=1.0.195", features = ["derive", "rc"] }
-chrono = "0.4.38"
-dirs-next = "2.0.0"
-toml = "0.8.13"
+chrono = "=0.4.38"
+dirs-next = "=2.0.0"
+toml = "=0.8.13"
