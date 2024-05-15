@@ -53,6 +53,8 @@ params = [
     'utm_medium', # Identifies what type of link was used
     'utm_term', # Identifies search terms
     'utm_content', # Identifies what specifically was clicked to bring the user to the site
+    "youtube.com``si", # YouTube specific Source identifier using "{domain}``{param}" pattern
+    "youtu.be``si", # YouTube specific Source identifier using "{domain}``{param}" pattern
 ]
 # Which exit params in URL should be unwrapped
 exit = [
