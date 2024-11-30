@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 copypasta = "=0.10.1"
 linkify = "=0.10.0"
-url = "=2.5.0"
+url = "=2.5.4"
 rustop = "=1.1.4"
 rand = "=0.8.5"
 confy = "=0.6.1"
