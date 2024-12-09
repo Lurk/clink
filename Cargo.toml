@@ -14,6 +14,6 @@ rustop = "=1.1.4"
 rand = "=0.8.5"
 confy = "=0.6.1"
 serde = { version = "=1.0.215", features = ["derive", "rc"] }
-chrono = "=0.4.38"
+chrono = "=0.4.39"
 dirs-next = "=2.0.0"
 toml = "=0.8.19"
