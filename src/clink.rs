@@ -71,7 +71,7 @@ impl Clink {
                 }
             }
             Mode::Evil => {
-                let mut rng = rand::thread_rng();
+                let mut rng = rand::rng();
                 query
                     .map(|(key, value)| {
                         if self.config.params.contains(&key) {
@@ -79,8 +79,8 @@ impl Clink {
                                 key,
                                 swap_two_chars(
                                     &value,
-                                    rng.gen_range(0..value.len()),
-                                    rng.gen_range(0..value.len()),
+                                    rng.random_range(0..value.len()),
+                                    rng.random_range(0..value.len()),
                                 ),
                             )
                         } else {
