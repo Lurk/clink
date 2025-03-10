@@ -14,7 +14,7 @@ url = "=2.5.4"
 rustop = "=1.1.4"
 rand = "=0.9.0"
 confy = "=0.6.1"
-serde = { version = "=1.0.218", features = ["derive", "rc"] }
+serde = { version = "=1.0.219", features = ["derive", "rc"] }
 chrono = "=0.4.40"
 dirs-next = "=2.0.0"
 toml = "=0.8.20"
