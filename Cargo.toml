@@ -17,4 +17,4 @@ confy = "=0.6.1"
 serde = { version = "=1.0.219", features = ["derive", "rc"] }
 chrono = "=0.4.40"
 dirs-next = "=2.0.0"
-toml = "=0.8.20"
+toml = "=0.8.22"
