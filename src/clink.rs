@@ -1,6 +1,6 @@
+use crate::ClinkConfig;
 use crate::expand_string::expand_string;
 use crate::mode::Mode;
-use crate::ClinkConfig;
 use chrono::prelude::*;
 use linkify::{LinkFinder, LinkKind};
 use rand::Rng;
@@ -357,7 +357,7 @@ mod find_and_replace {
 
 #[cfg(test)]
 mod unwrap_exit_params {
-    use crate::{clink::Clink, ClinkConfig};
+    use crate::{ClinkConfig, clink::Clink};
 
     #[test]
     fn has_exit_url() {
