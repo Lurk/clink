@@ -4,7 +4,7 @@ mod expand_string;
 mod mode;
 
 use clink::Clink;
-use config::{fallback_config_path, load_config, ClinkConfig};
+use config::{ClinkConfig, fallback_config_path, load_config};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use dirs_next::config_dir;
 use rustop::opts;
