@@ -14,18 +14,33 @@ use crate::mode::Mode;
 /// "{domain}``{param}"
 fn get_default_params() -> HashSet<String> {
     HashSet::from([
+        "dclid".into(),
         "fbclid".into(),
         "gclid".into(),
         "gclsrc".into(),
         "dclid".into(),
-        "zanpid".into(),
-        "utm_source".into(),
-        "utm_campaign".into(),
+        "utm_id".into(),
+        "utm_source_platform".into(),
+        "utm_Creative_format".into(),
         "utm_medium".into(),
+        "utm_source".into(),
         "utm_term".into(),
+        "utm_campaign".into(),
         "utm_content".into(),
+        "zanpid".into(),
         "youtube.com``si".into(),
         "youtu.be``si".into(),
+        "youtu.be``si".into(),
+        "amazon.de``sp_csd".into(),
+        "amazon.de``pd_rd_w".into(),
+        "amazon.de``pd_rd_wg".into(),
+        "amazon.de``pd_rd_i".into(),
+        "amazon.de``pd_rd_r".into(),
+        "amazon.de``pf_rd_r".into(),
+        "amazon.de``pf_rd_p".into(),
+        "amazon.de``t".into(),
+        "amazon.de``psc".into(),
+        "amazon.de``content-id".into(),
     ])
 }
 
@@ -78,7 +93,7 @@ pub fn load_config(config_path: &Path) -> ClinkConfig {
         Err(e) => {
             println!("Clink {}\nConfig error\n", env!("CARGO_PKG_VERSION"));
             println!("looks like you have bad config or config for an old version");
-            println!("Look at: {:?}\n", config_path);
+            println!("Look at: {config_path:?}\n");
             println!(
                 "config should look like this:\n\n{}",
                 toml::to_string_pretty(&ClinkConfig::default()).unwrap()
