@@ -16,7 +16,7 @@ fn main() -> Result<(), confy::ConfyError> {
         synopsis "Clink automatically cleans url in your clipboard";
         version env!("CARGO_PKG_VERSION");
         opt verbose:bool, desc:"Be verbose.";
-        opt config:String = fallback_config_path(config_dir()).into_os_string().into_string().unwrap(), desc: "config path."; 
+        opt config:String = fallback_config_path(config_dir()).into_os_string().into_string().unwrap(), desc: "config path.";
     }
     .parse_or_exit();
 
