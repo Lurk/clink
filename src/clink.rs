@@ -155,7 +155,7 @@ fn swap_two_chars(s: &str, a: usize, b: usize) -> String {
 }
 
 fn join_url(domain: &str, path: &str) -> Rc<str> {
-    format!("{}{}", domain, path).into()
+    format!("{domain}{path}").into()
 }
 
 fn build_exit_map(input: &[Vec<Rc<str>>]) -> HashMap<Rc<str>, Rc<[Rc<str>]>> {

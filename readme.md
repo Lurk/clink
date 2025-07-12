@@ -9,7 +9,7 @@ It sits quietly in the background, and if you copy a link to the clipboard, Clin
 ## Install
 
 ```sh
-cargo install --git https://github.com/Lurk/clink clink 
+cargo install --git https://github.com/Lurk/clink clink
 ```
 
 ## Run
@@ -36,9 +36,9 @@ Default config:
 ```toml
 # You can find detail description of modes bellow
 # one of: remove, replace, your_mom, evil
-mode = 'remove' 
-# Text for replace mode  
-replace_to = 'aHR0cHM6Ly95b3V0dS5iZS9kUXc0dzlXZ1hjUQ==' 
+mode = 'remove'
+# Text for replace mode
+replace_to = 'aHR0cHM6Ly95b3V0dS5iZS9kUXc0dzlXZ1hjUQ=='
 # How often Clink will check clipboard in milliseconds
 sleep_duration = 150
 # Which GET params Clink should update
@@ -48,7 +48,10 @@ params = [
     'gclsrc', # Google Ads
     'dclid', # DoubleClick click identifier (now Google)
     'zanpid', # zanox click identifier (now Awin)
-    'utm_source', # Identifies which site sent the traffic 
+    'utm_id', # Identifies which ads campaign this referral references.
+    'utm_source', # Identifies which site sent the traffic
+    'utm_source_platform', # Specifies the platform (like Instagram or desktop) used to deliver traffic.
+    'utm_Creative_format', # Identifies the format of the ad creative
     'utm_campaign', # Identifies a specific product promotion or strategic campaign
     'utm_medium', # Identifies what type of link was used
     'utm_term', # Identifies search terms
@@ -91,7 +94,7 @@ exit = [
         "mora.jp/cart",
         "returnUrl",
     ],
-] 
+]
 ```
 
 ### mode
