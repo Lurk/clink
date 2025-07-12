@@ -48,7 +48,7 @@ params = [
     'gclsrc', # Google Ads
     'dclid', # DoubleClick click identifier (now Google)
     'zanpid', # zanox click identifier (now Awin)
-    'utm_id'. # Identifies which ads campaign this referral references.
+    'utm_id', # Identifies which ads campaign this referral references.
     'utm_source', # Identifies which site sent the traffic
     'utm_source_platform', # Specifies the platform (like Instagram or desktop) used to deliver traffic.
     'utm_Creative_format', # Identifies the format of the ad creative
