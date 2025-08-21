@@ -10,7 +10,7 @@ rust-version = "1.85.0"
 [dependencies]
 copypasta = "=0.10.2"
 linkify = "=0.10.0"
-url = "=2.5.4"
+url = "=2.5.6"
 rustop = "=1.1.4"
 rand = "=0.9.2"
 confy = "=1.0.0"
