@@ -3,7 +3,7 @@ use crate::expand_string::expand_string;
 use crate::mode::Mode;
 use chrono::prelude::*;
 use linkify::{LinkFinder, LinkKind};
-use rand::Rng;
+use rand::RngExt;
 use std::collections::HashMap;
 use std::rc::Rc;
 use url::Url;
