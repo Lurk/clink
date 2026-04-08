@@ -3,7 +3,8 @@ Description=Clean links copied to clipboard
 Documentation=https://github.com/Lurk/clink?tab=readme-ov-file#readme
 
 [Service]
-ExecStart=/usr/bin/clink
+ExecStart=/usr/bin/clink run
+ExecReload=/bin/kill -HUP $MAINPID
 # Sandboxing and other hardening
 NoNewPrivileges=yes
 ProtectProc=noaccess

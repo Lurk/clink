@@ -1,7 +1,6 @@
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
-    process,
     rc::Rc,
 };
 
@@ -79,6 +78,17 @@ impl ClinkConfig {
             verbose: false,
         }
     }
+
+    pub fn validate(&self) -> Vec<String> {
+        let mut warnings = Vec::new();
+        if self.sleep_duration == 0 {
+            warnings.push("sleep_duration is 0, this will cause 100% CPU usage".to_string());
+        }
+        if self.params.is_empty() {
+            warnings.push("No tracking params configured — clink won't clean anything".to_string());
+        }
+        warnings
+    }
 }
 
 impl Default for ClinkConfig {
@@ -87,22 +97,15 @@ impl Default for ClinkConfig {
     }
 }
 
-pub fn load_config(config_path: &Path) -> ClinkConfig {
-    match confy::load_path(config_path) {
-        Ok(cfg) => cfg,
-        Err(e) => {
-            println!("Clink {}\nConfig error\n", env!("CARGO_PKG_VERSION"));
-            println!("looks like you have bad config or config for an old version");
-            println!("Look at: {config_path:?}\n");
-            println!(
-                "config should look like this:\n\n{}",
-                toml::to_string_pretty(&ClinkConfig::default()).unwrap()
-            );
-
-            eprintln!("original error:\n {e:#?}");
-            process::exit(1);
-        }
-    }
+pub fn load_config(config_path: &Path) -> Result<ClinkConfig, String> {
+    confy::load_path(config_path).map_err(|e| {
+        format!(
+            "Config error at {config_path:?}: {e}\n\n\
+             Looks like you have a bad config or config for an old version.\n\
+             Config should look like this:\n\n{}",
+            toml::to_string_pretty(&ClinkConfig::default()).unwrap()
+        )
+    })
 }
 
 pub fn fallback_config_path(path: Option<PathBuf>) -> PathBuf {
@@ -116,4 +119,44 @@ pub fn fallback_config_path(path: Option<PathBuf>) -> PathBuf {
     };
 
     p.join("config.toml")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_default_config() {
+        let cfg = ClinkConfig::default();
+        let warnings = cfg.validate();
+        assert!(
+            warnings.is_empty(),
+            "default config should have no warnings"
+        );
+    }
+
+    #[test]
+    fn test_validate_zero_sleep_duration() {
+        let mut cfg = ClinkConfig::default();
+        cfg.sleep_duration = 0;
+        let warnings = cfg.validate();
+        assert!(warnings.iter().any(|w| w.contains("sleep_duration")));
+    }
+
+    #[test]
+    fn test_validate_empty_params() {
+        let mut cfg = ClinkConfig::default();
+        cfg.params.clear();
+        let warnings = cfg.validate();
+        assert!(warnings.iter().any(|w| w.contains("params")));
+    }
+
+    #[test]
+    fn test_load_config_returns_result() {
+        let tmp = std::env::temp_dir().join("clink_test_bad_config.toml");
+        std::fs::write(&tmp, "this is not valid [[[ toml").unwrap();
+        let result = load_config(&tmp);
+        assert!(result.is_err());
+        let _ = std::fs::remove_file(&tmp);
+    }
 }

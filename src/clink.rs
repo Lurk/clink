@@ -1,4 +1,4 @@
-use crate::ClinkConfig;
+use crate::config::ClinkConfig;
 use crate::expand_string::expand_string;
 use crate::mode::Mode;
 use chrono::prelude::*;
@@ -357,7 +357,7 @@ mod find_and_replace {
 
 #[cfg(test)]
 mod unwrap_exit_params {
-    use crate::{ClinkConfig, clink::Clink};
+    use crate::{clink::Clink, config::ClinkConfig};
 
     #[test]
     fn has_exit_url() {

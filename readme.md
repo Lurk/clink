@@ -18,6 +18,51 @@ cargo install --git https://github.com/Lurk/clink clink
 clink
 ```
 
+Running `clink` with no subcommand starts the clipboard monitor daemon.
+
+## Commands
+
+| Command       | Description                                          |
+|---------------|------------------------------------------------------|
+| `clink`       | Start the clipboard monitor (default)                |
+| `clink run`   | Same as above, explicit form                         |
+| `clink init`  | Initialize default config file                       |
+| `clink install` | Install as a system service (launchd/systemd)      |
+| `clink uninstall` | Remove the installed system service              |
+| `clink validate` | Validate configuration file                       |
+| `clink reload` | Reload configuration of the running instance        |
+| `clink restart` | Restart the running instance                       |
+| `clink state` | Show current state and last log entries               |
+
+### Global options
+
+All commands accept these options:
+
+- `-c, --config <path>` — Specify config file path
+- `-v, --verbose` — Enable verbose output
+
+### Service management
+
+Install clink to start automatically on login:
+
+```sh
+clink install
+```
+
+This creates a launchd agent on macOS or a systemd user service on Linux. To remove:
+
+```sh
+clink uninstall
+```
+
+### Runtime management
+
+```sh
+clink state     # Check if clink is running and view recent log
+clink reload    # Reload config without restarting
+clink restart   # Stop the running instance
+```
+
 ## Config
 
 Path for config file can be altered by -c, --config option.
