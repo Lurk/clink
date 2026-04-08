@@ -1,17 +1,18 @@
 use crate::config::load_config;
-use std::path::PathBuf;
+use std::path::Path;
 
-pub fn execute(config_path: PathBuf) -> Result<(), String> {
+pub fn execute(config_path: &Path) -> Result<(), String> {
     if !config_path.is_file() {
         return Err(format!(
-            "Config file not found at {config_path:?}. Run `clink init` to create one."
+            "Config file not found at {}. Run `clink init` to create one.",
+            config_path.display()
         ));
     }
 
-    let cfg = load_config(&config_path)?;
+    let cfg = load_config(config_path)?;
     let warnings = cfg.validate();
 
-    println!("Config at {config_path:?}:");
+    println!("Config at {}:", config_path.display());
     println!("  Mode: {}", cfg.mode);
     println!("  Sleep duration: {}ms", cfg.sleep_duration);
     println!("  Tracked params: {}", cfg.params.len());
@@ -39,7 +40,7 @@ mod tests {
         let cfg = ClinkConfig::default();
         confy::store_path(&tmp, &cfg).unwrap();
 
-        let result = execute(tmp.clone());
+        let result = execute(&tmp);
         assert!(result.is_ok(), "validate should succeed: {:?}", result);
 
         let _ = std::fs::remove_file(&tmp);
@@ -50,7 +51,7 @@ mod tests {
         let tmp = std::env::temp_dir().join("clink_test_validate_bad.toml");
         std::fs::write(&tmp, "this is not valid toml for clink config [[[").unwrap();
 
-        let result = execute(tmp.clone());
+        let result = execute(&tmp);
         assert!(result.is_err(), "validate should fail for bad TOML");
 
         let _ = std::fs::remove_file(&tmp);
@@ -61,7 +62,7 @@ mod tests {
         let tmp = std::env::temp_dir().join("clink_test_validate_missing.toml");
         let _ = std::fs::remove_file(&tmp);
 
-        let result = execute(tmp);
+        let result = execute(&tmp);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("not found"));
     }

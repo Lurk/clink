@@ -21,11 +21,11 @@ fn main() {
         .unwrap_or_else(|| fallback_config_path(config_dir()));
 
     let result = match cli.command {
-        None | Some(Command::Run) => commands::run::execute(config_path, cli.verbose),
-        Some(Command::Init) => commands::init::execute(config_path),
-        Some(Command::Install) => commands::install::execute(config_path),
+        None | Some(Command::Run) => commands::run::execute(&config_path, cli.verbose),
+        Some(Command::Init) => commands::init::execute(&config_path),
+        Some(Command::Install) => commands::install::execute(&config_path),
         Some(Command::Uninstall) => commands::uninstall::execute(),
-        Some(Command::Validate) => commands::validate::execute(config_path),
+        Some(Command::Validate) => commands::validate::execute(&config_path),
         Some(Command::Reload) => commands::reload::execute(),
         Some(Command::Restart) => commands::restart::execute(),
         Some(Command::State) => commands::state::execute(),

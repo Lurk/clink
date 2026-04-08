@@ -13,15 +13,11 @@ pub fn log_file_path() -> PathBuf {
 fn runtime_dir() -> PathBuf {
     #[cfg(target_os = "macos")]
     {
-        std::env::var("TMPDIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::temp_dir())
+        std::env::var("TMPDIR").map_or_else(|_| std::env::temp_dir(), PathBuf::from)
     }
     #[cfg(target_os = "linux")]
     {
-        std::env::var("XDG_RUNTIME_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::temp_dir())
+        std::env::var("XDG_RUNTIME_DIR").map_or_else(|_| std::env::temp_dir(), PathBuf::from)
     }
     #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {
@@ -30,9 +26,7 @@ fn runtime_dir() -> PathBuf {
 }
 
 fn data_dir() -> PathBuf {
-    dirs_next::data_dir()
-        .map(|d| d.join("clink"))
-        .unwrap_or_else(|| PathBuf::from("."))
+    dirs_next::data_dir().map_or_else(|| PathBuf::from("."), |d| d.join("clink"))
 }
 
 pub fn write_pid_file() -> Result<(), String> {
@@ -41,7 +35,8 @@ pub fn write_pid_file() -> Result<(), String> {
         if is_running(existing_pid) {
             return Err(format!(
                 "clink is already running (PID {existing_pid}). \
-                 If this is incorrect, remove {path:?} and try again."
+                 If this is incorrect, remove {} and try again.",
+                path.display()
             ));
         }
     }
@@ -67,6 +62,7 @@ pub fn remove_pid_file() {
 pub fn is_running(pid: u32) -> bool {
     use nix::sys::signal;
     use nix::unistd::Pid;
+    #[allow(clippy::cast_possible_wrap)]
     signal::kill(Pid::from_raw(pid as i32), None).is_ok()
 }
 
@@ -85,7 +81,7 @@ pub fn append_log(message: &str) -> Result<(), String> {
         .append(true)
         .open(&path)
         .map_err(|e| format!("Failed to open log file: {e}"))?;
-    writeln!(file, "{}", message).map_err(|e| format!("Failed to write log: {e}"))?;
+    writeln!(file, "{message}").map_err(|e| format!("Failed to write log: {e}"))?;
     Ok(())
 }
 
@@ -95,7 +91,10 @@ pub fn read_last_log_lines(n: usize) -> Vec<String> {
         Ok(content) => {
             let lines: Vec<&str> = content.lines().collect();
             let start = lines.len().saturating_sub(n);
-            lines[start..].iter().map(|s| s.to_string()).collect()
+            lines[start..]
+                .iter()
+                .map(std::string::ToString::to_string)
+                .collect()
         }
         Err(_) => vec![],
     }

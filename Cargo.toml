@@ -22,3 +22,6 @@ toml = "1.1.2+spec-1.1.0"
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "=0.31.2", features = ["signal", "process"] }
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }

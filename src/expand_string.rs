@@ -119,7 +119,7 @@ struct Expander {
 impl Expander {
     fn new() -> Expander {
         Expander {
-            stack: vec![vec![String::from("")]],
+            stack: vec![vec![String::new()]],
             group: None,
         }
     }
@@ -139,8 +139,8 @@ impl Expander {
             if self.stack.is_empty() {
                 let mut permutations: Vec<String> = vec![];
 
-                for parent_item in parent_group.iter() {
-                    for group_item in group.iter() {
+                for parent_item in &parent_group {
+                    for group_item in &group {
                         permutations.push(format!(
                             "{}{}",
                             parent_item.as_str(),
@@ -152,7 +152,7 @@ impl Expander {
                 self.group = None;
             } else {
                 let parent_item = parent_group.pop().unwrap();
-                for group_item in group.iter() {
+                for group_item in &group {
                     parent_group.push(format!("{}{}", parent_item.as_str(), group_item.as_str()));
                 }
                 self.group = Some(parent_group);

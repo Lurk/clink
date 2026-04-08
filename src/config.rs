@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::mode::Mode;
 
-/// add query param, that must be replaced within any domain
-/// to specify domain specific params use format
-/// "{domain}``{param}"
+/// Add query param, that must be replaced within any domain.
+/// To specify domain specific params use format
+/// `"{domain}``{param}"`.
 fn get_default_params() -> HashSet<String> {
     HashSet::from([
         "dclid".into(),
@@ -98,9 +98,10 @@ impl Default for ClinkConfig {
 }
 
 pub fn load_config(config_path: &Path) -> Result<ClinkConfig, String> {
+    let path = config_path.display();
     confy::load_path(config_path).map_err(|e| {
         format!(
-            "Config error at {config_path:?}: {e}\n\n\
+            "Config error at {path}: {e}\n\n\
              Looks like you have a bad config or config for an old version.\n\
              Config should look like this:\n\n{}",
             toml::to_string_pretty(&ClinkConfig::default()).unwrap()

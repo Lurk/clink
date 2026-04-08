@@ -1,10 +1,11 @@
 use crate::config::ClinkConfig;
-use std::path::PathBuf;
+use std::path::Path;
 
-pub fn execute(config_path: PathBuf) -> Result<(), String> {
+pub fn execute(config_path: &Path) -> Result<(), String> {
     if config_path.is_file() {
         return Err(format!(
-            "Config already exists at {config_path:?}. Remove it first if you want to reinitialize."
+            "Config already exists at {}. Remove it first if you want to reinitialize.",
+            config_path.display()
         ));
     }
 
@@ -14,9 +15,9 @@ pub fn execute(config_path: PathBuf) -> Result<(), String> {
     }
 
     let cfg = ClinkConfig::default();
-    confy::store_path(&config_path, &cfg).map_err(|e| format!("Failed to write config: {e}"))?;
+    confy::store_path(config_path, &cfg).map_err(|e| format!("Failed to write config: {e}"))?;
 
-    println!("Config initialized at {config_path:?}");
+    println!("Config initialized at {}", config_path.display());
     Ok(())
 }
 
@@ -29,7 +30,7 @@ mod tests {
         let tmp = std::env::temp_dir().join("clink_test_init_config.toml");
         let _ = std::fs::remove_file(&tmp);
 
-        let result = execute(tmp.clone());
+        let result = execute(&tmp);
         assert!(result.is_ok(), "init should succeed: {:?}", result);
         assert!(tmp.is_file(), "config file should exist");
 
@@ -45,7 +46,7 @@ mod tests {
         let tmp = std::env::temp_dir().join("clink_test_init_no_overwrite.toml");
         std::fs::write(&tmp, "existing content").unwrap();
 
-        let result = execute(tmp.clone());
+        let result = execute(&tmp);
         assert!(result.is_err(), "init should fail when file exists");
         assert!(result.unwrap_err().contains("already exists"));
 

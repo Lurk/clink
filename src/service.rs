@@ -56,7 +56,7 @@ mod platform {
 
         let content = generate_plist(binary_path, config_path);
         fs::write(&plist, &content)
-            .map_err(|e| format!("Failed to write plist at {plist:?}: {e}"))?;
+            .map_err(|e| format!("Failed to write plist at {}: {e}", plist.display()))?;
 
         let output = Command::new("launchctl")
             .args(["load", "-w"])
@@ -69,7 +69,7 @@ mod platform {
             return Err(format!("launchctl load failed: {stderr}"));
         }
 
-        println!("Installed launchd service at {plist:?}");
+        println!("Installed launchd service at {}", plist.display());
         println!("clink will start automatically on login.");
         Ok(())
     }
@@ -93,7 +93,7 @@ mod platform {
 
         fs::remove_file(&plist).map_err(|e| format!("Failed to remove plist: {e}"))?;
 
-        println!("Uninstalled launchd service. Removed {plist:?}");
+        println!("Uninstalled launchd service. Removed {}", plist.display());
         Ok(())
     }
 }
@@ -158,7 +158,7 @@ WantedBy=default.target
 
         let content = generate_unit(binary_path, config_path);
         fs::write(&unit, &content)
-            .map_err(|e| format!("Failed to write unit file at {unit:?}: {e}"))?;
+            .map_err(|e| format!("Failed to write unit file at {}: {e}", unit.display()))?;
 
         let output = Command::new("systemctl")
             .args(["--user", "daemon-reload"])
@@ -180,7 +180,7 @@ WantedBy=default.target
             return Err(format!("systemctl enable failed: {stderr}"));
         }
 
-        println!("Installed systemd user service at {unit:?}");
+        println!("Installed systemd user service at {}", unit.display());
         println!("clink will start automatically on login.");
         Ok(())
     }
@@ -207,7 +207,7 @@ WantedBy=default.target
             .args(["--user", "daemon-reload"])
             .output();
 
-        println!("Uninstalled systemd service. Removed {unit:?}");
+        println!("Uninstalled systemd service. Removed {}", unit.display());
         Ok(())
     }
 }

@@ -2,33 +2,34 @@ use crate::clink::Clink;
 use crate::config::{ClinkConfig, load_config};
 use crate::runtime;
 use copypasta::{ClipboardContext, ClipboardProvider};
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::{thread, time::Duration};
 
-pub fn execute(config_path: PathBuf, verbose: bool) -> Result<(), String> {
+#[allow(clippy::too_many_lines)]
+pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
     runtime::write_pid_file()?;
 
     #[cfg(unix)]
     let signals = crate::signal::install_signal_handlers();
 
     let log_msg = format!(
-        "[{}] clink {} started (PID {}, config: {:?})",
+        "[{}] clink {} started (PID {}, config: {})",
         chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
         env!("CARGO_PKG_VERSION"),
         std::process::id(),
-        config_path
+        config_path.display()
     );
     if verbose {
         println!("{log_msg}");
     }
     let _ = runtime::append_log(&log_msg);
 
-    let mut cfg: ClinkConfig = load_config(&config_path)?;
+    let mut cfg: ClinkConfig = load_config(config_path)?;
     cfg.verbose = verbose;
 
     if verbose {
-        println!("Config ({config_path:?}):\n {cfg:#?}");
+        println!("Config ({}):\n {cfg:#?}", config_path.display());
     }
 
     let sleep_duration = Duration::from_millis(cfg.sleep_duration);
@@ -56,16 +57,16 @@ pub fn execute(config_path: PathBuf, verbose: bool) -> Result<(), String> {
             if signals.reload_requested.load(Ordering::SeqCst) {
                 signals.reload_requested.store(false, Ordering::SeqCst);
                 let msg = format!(
-                    "[{}] Reloading config from {:?}",
+                    "[{}] Reloading config from {}",
                     chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-                    config_path
+                    config_path.display()
                 );
                 if verbose {
                     println!("{msg}");
                 }
                 let _ = runtime::append_log(&msg);
 
-                match load_config(&config_path) {
+                match load_config(config_path) {
                     Ok(mut new_cfg) => {
                         new_cfg.verbose = verbose;
                         clink = Clink::new(new_cfg);

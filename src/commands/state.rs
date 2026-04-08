@@ -1,5 +1,6 @@
 use crate::runtime;
 
+#[allow(clippy::unnecessary_wraps)]
 pub fn execute() -> Result<(), String> {
     let pid = runtime::read_pid();
 
@@ -17,7 +18,7 @@ pub fn execute() -> Result<(), String> {
     }
 
     let log_path = runtime::log_file_path();
-    println!("\nLog file: {log_path:?}");
+    println!("\nLog file: {}", log_path.display());
 
     let lines = runtime::read_last_log_lines(20);
     if lines.is_empty() {

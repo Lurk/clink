@@ -21,7 +21,7 @@ impl Clink {
         finder.kinds(&[LinkKind::Url]);
 
         if config.verbose {
-            println!("Exit map: {exit_map:#?}")
+            println!("Exit map: {exit_map:#?}");
         }
 
         Clink {
@@ -100,9 +100,7 @@ impl Clink {
         query
             .filter(|(key, _)| {
                 !self.config.params.contains(key)
-                    && domain
-                        .map(|d| !self.config.params.contains(&format!("{d}``{key}")))
-                        .unwrap_or(true)
+                    && domain.is_none_or(|d| !self.config.params.contains(&format!("{d}``{key}")))
             })
             .collect()
     }
@@ -160,9 +158,9 @@ fn join_url(domain: &str, path: &str) -> Rc<str> {
 
 fn build_exit_map(input: &[Vec<Rc<str>>]) -> HashMap<Rc<str>, Rc<[Rc<str>]>> {
     let mut map: HashMap<Rc<str>, Rc<[Rc<str>]>> = HashMap::new();
-    for row in input.iter() {
+    for row in input {
         let expanded = expand_string(&row[0]);
-        for url in expanded.into_iter() {
+        for url in expanded {
             map.insert(url.into(), row[1..].to_vec().into());
         }
     }

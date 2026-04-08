@@ -48,6 +48,7 @@ extern "C" fn sigterm_handler(_: nix::libc::c_int) {
 }
 
 pub fn send_signal(pid: u32, sig: Signal) -> Result<(), String> {
+    #[allow(clippy::cast_possible_wrap)]
     signal::kill(Pid::from_raw(pid as i32), sig)
         .map_err(|e| format!("Failed to send signal to PID {pid}: {e}"))
 }
