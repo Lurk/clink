@@ -11,34 +11,108 @@ use crate::mode::Mode;
 /// Add query param, that must be replaced within any domain.
 /// To specify domain specific params use format
 /// `"{domain}``{param}"`.
+const AMAZON_DOMAINS: &[&str] = &[
+    "amazon.com",
+    "amazon.de",
+    "amazon.co.uk",
+    "amazon.co.jp",
+    "amazon.fr",
+    "amazon.it",
+    "amazon.es",
+    "amazon.ca",
+    "amazon.com.au",
+    "amazon.com.br",
+    "amazon.com.mx",
+    "amazon.nl",
+    "amazon.pl",
+    "amazon.se",
+    "amazon.sg",
+    "amazon.in",
+    "amazon.com.be",
+    "amazon.com.tr",
+    "amazon.eg",
+    "amazon.sa",
+    "amazon.ae",
+];
+
+const AMAZON_PARAMS: &[&str] = &[
+    "sp_csd",
+    "pd_rd_w",
+    "pd_rd_wg",
+    "pd_rd_i",
+    "pd_rd_r",
+    "pf_rd_r",
+    "pf_rd_p",
+    "t",
+    "psc",
+    "content-id",
+];
+
+/// Add query param, that must be replaced within any domain.
+/// To specify domain specific params use format
+/// `"{domain}``{param}"`.
 fn get_default_params() -> HashSet<String> {
-    HashSet::from([
+    let mut params = HashSet::from([
+        // Google
         "dclid".into(),
-        "fbclid".into(),
         "gclid".into(),
         "gclsrc".into(),
+        "_ga".into(),
+        "_gl".into(),
+        // Meta (Facebook/Instagram)
+        "fbclid".into(),
+        "igshid".into(),
+        // Microsoft/Bing
+        "msclkid".into(),
+        // Twitter/X
+        "twclid".into(),
+        // TikTok
+        "ttclid".into(),
+        // LinkedIn
+        "li_fat_id".into(),
+        // Yandex
+        "yclid".into(),
+        // UTM family
         "utm_id".into(),
-        "utm_source_platform".into(),
-        "utm_Creative_format".into(),
-        "utm_medium".into(),
         "utm_source".into(),
+        "utm_source_platform".into(),
+        "utm_creative_format".into(),
+        "utm_medium".into(),
         "utm_term".into(),
         "utm_campaign".into(),
         "utm_content".into(),
+        // Awin (formerly Zanox)
         "zanpid".into(),
+        // Mailchimp
+        "mc_cid".into(),
+        "mc_eid".into(),
+        // HubSpot
+        "_hsenc".into(),
+        "_hsmi".into(),
+        // Marketo
+        "mkt_tok".into(),
+        // Drip
+        "__s".into(),
+        // Openstat
+        "_openstat".into(),
+        // Vero
+        "vero_id".into(),
+        // Alibaba/AliExpress
+        "spm".into(),
+        // YouTube
         "youtube.com``si".into(),
         "youtu.be``si".into(),
-        "amazon.de``sp_csd".into(),
-        "amazon.de``pd_rd_w".into(),
-        "amazon.de``pd_rd_wg".into(),
-        "amazon.de``pd_rd_i".into(),
-        "amazon.de``pd_rd_r".into(),
-        "amazon.de``pf_rd_r".into(),
-        "amazon.de``pf_rd_p".into(),
-        "amazon.de``t".into(),
-        "amazon.de``psc".into(),
-        "amazon.de``content-id".into(),
-    ])
+        "music.youtube.com``si".into(),
+    ]);
+
+    // Amazon tracking params across all domains
+    for domain in AMAZON_DOMAINS {
+        for param in AMAZON_PARAMS {
+            params.insert(format!("{domain}``{param}"));
+        }
+    }
+
+    params
 }
 
 fn get_default_exit() -> Vec<Vec<Rc<str>>> {
@@ -46,7 +120,8 @@ fn get_default_exit() -> Vec<Vec<Rc<str>>> {
     vec!["vk.com/away.php".into(), "to".into()],
     vec!["exit.sc/".into(), "url".into()],
     vec!["facebook.com/(l|confirmemail|login).php".into(), "u".into(), "next".into()],
-    vec!["(www.|)(encrypted.|)google.(at|be|ca|ch|co.(bw|il|uk)|com(|.(ar|au|br|eg|tr|tw))|cl|de|dk|es|fr|nl|pl|se)/url".into(), "url".into()],
+    vec!["(www.|)(encrypted.|)google.(at|be|ca|ch|co.(bw|il|in|jp|nz|uk|za)|com(|.(ar|au|br|eg|mx|sg|tr|tw))|cl|de|dk|es|fr|it|nl|pl|pt|ru|se)/url".into(), "url".into()],
+    vec!["bing.com/ck/a".into(), "u".into()],
     vec!["l.instagram.com/".into(), "u".into()],
     vec!["youtube.com/redirect".into(), "q".into()],
     vec!["linkedin.com/authwall".into(), "sessionRedirect".into()],
@@ -147,6 +222,70 @@ mod tests {
         cfg.params.clear();
         let warnings = cfg.validate();
         assert!(warnings.iter().any(|w| w.contains("params")));
+    }
+
+    #[test]
+    fn test_default_params_include_common_trackers() {
+        let cfg = ClinkConfig::default();
+        // Core trackers that should be present
+        for param in [
+            "fbclid",
+            "gclid",
+            "gclsrc",
+            "dclid",
+            "zanpid",
+            "msclkid",
+            "twclid",
+            "ttclid",
+            "igshid",
+            "li_fat_id",
+            "mc_cid",
+            "mc_eid",
+            "_ga",
+            "_gl",
+            "yclid",
+            "_hsenc",
+            "_hsmi",
+            "mkt_tok",
+            "__s",
+            "_openstat",
+            "vero_id",
+            "spm",
+        ] {
+            assert!(cfg.params.contains(param), "missing default param: {param}");
+        }
+    }
+
+    #[test]
+    fn test_default_params_utm_creative_format_lowercase() {
+        let cfg = ClinkConfig::default();
+        assert!(
+            cfg.params.contains("utm_creative_format"),
+            "utm_creative_format should be lowercase"
+        );
+        assert!(
+            !cfg.params.contains("utm_Creative_format"),
+            "utm_Creative_format (capital C) should not exist"
+        );
+    }
+
+    #[test]
+    fn test_default_params_amazon_com() {
+        let cfg = ClinkConfig::default();
+        // Amazon tracking params should cover .com, not just .de
+        assert!(
+            cfg.params.contains("amazon.com``sp_csd"),
+            "missing amazon.com tracking params"
+        );
+    }
+
+    #[test]
+    fn test_default_params_youtube_music() {
+        let cfg = ClinkConfig::default();
+        assert!(
+            cfg.params.contains("music.youtube.com``si"),
+            "missing music.youtube.com si param"
+        );
     }
 
     #[test]

@@ -216,6 +216,7 @@ dependencies = [
  "dirs-next",
  "linkify",
  "nix",
+ "percent-encoding",
  "rand",
  "serde",
  "serde_json",

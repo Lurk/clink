@@ -3,10 +3,13 @@ use crate::expand_string::expand_string;
 use crate::mode::Mode;
 use chrono::prelude::*;
 use linkify::{LinkFinder, LinkKind};
+use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use rand::RngExt;
 use std::collections::HashMap;
 use std::rc::Rc;
 use url::Url;
+
+const QUERY_COMPONENT: &AsciiSet = &CONTROLS.add(b' ').add(b'#').add(b'&').add(b'=').add(b'+');
 
 pub struct Clink {
     config: ClinkConfig,
@@ -42,10 +45,18 @@ impl Clink {
             );
             l.set_query(None);
             if !query.is_empty() {
-                let mut query_pairs = l.query_pairs_mut();
-                for (key, value) in query {
-                    query_pairs.append_pair(key.as_str(), value.as_str());
-                }
+                let qs = query
+                    .iter()
+                    .map(|(k, v)| {
+                        format!(
+                            "{}={}",
+                            utf8_percent_encode(k, QUERY_COMPONENT),
+                            utf8_percent_encode(v, QUERY_COMPONENT),
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("&");
+                l.set_query(Some(&qs));
             }
             res = res.replace(link.as_str(), l.as_str());
         }
@@ -349,6 +360,15 @@ mod find_and_replace {
             "https://youtu.be/?utm_source=your_mom"
         );
     }
+
+    #[test]
+    fn preserves_unwise_characters_in_query() {
+        let clink = Clink::new(ClinkConfig::default());
+        assert_eq!(
+            clink.find_and_replace("https://foo.foo/?param[]=1&param[]=2&fbclid=abc"),
+            "https://foo.foo/?param[]=1&param[]=2"
+        );
+    }
 }
 
 #[cfg(test)]
@@ -381,6 +401,47 @@ mod unwrap_exit_params {
                 "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
             ),
             "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
+        );
+    }
+
+    #[test]
+    fn has_exit_url_google_it() {
+        let clink = Clink::new(ClinkConfig::default());
+        assert_eq!(
+            clink
+                .unwrap_exit_params("https://www.google.it/url?url=https%3A%2F%2Fexample.com&sa=t"),
+            "https://example.com"
+        );
+    }
+
+    #[test]
+    fn has_exit_url_bing() {
+        let clink = Clink::new(ClinkConfig::default());
+        assert_eq!(
+            clink.unwrap_exit_params("https://bing.com/ck/a?u=https%3A%2F%2Fexample.com&foo=bar"),
+            "https://example.com"
+        );
+    }
+
+    #[test]
+    fn amazon_com_tracking_stripped() {
+        let clink = Clink::new(ClinkConfig::default());
+        assert_eq!(
+            clink.find_and_replace(
+                "https://www.amazon.com/dp/B08N5WRWNW?sp_csd=d2lkZ2V0TmFtZQ&pd_rd_w=abc&ref=foo"
+            ),
+            "https://www.amazon.com/dp/B08N5WRWNW?ref=foo"
+        );
+    }
+
+    #[test]
+    fn youtube_music_si_stripped() {
+        let clink = Clink::new(ClinkConfig::default());
+        assert_eq!(
+            clink.find_and_replace(
+                "https://music.youtube.com/watch?v=dQw4w9WgXcQ&si=NblIBgit-qHN7MoH"
+            ),
+            "https://music.youtube.com/watch?v=dQw4w9WgXcQ"
         );
     }
 

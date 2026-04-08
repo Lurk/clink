@@ -79,30 +79,64 @@ On the first run, clink will create the default config in the path.
 Default config:
 
 ```toml
-# You can find detail description of modes bellow
+# You can find detailed description of modes below
 # one of: remove, replace, your_mom, evil
 mode = 'remove'
 # Text for replace mode
-replace_to = 'aHR0cHM6Ly95b3V0dS5iZS9kUXc0dzlXZ1hjUQ=='
+replace_to = 'clink'
 # How often Clink will check clipboard in milliseconds
 sleep_duration = 150
 # Which GET params Clink should update
 params = [
+    # Google
+    'dclid', # DoubleClick click identifier
+    'gclid', # Google Ads click identifier
+    'gclsrc', # Google Ads source
+    '_ga', # Google Analytics cross-domain
+    '_gl', # Google Analytics linker
+    # Meta (Facebook/Instagram)
     'fbclid', # Facebook click identifier
-    'gclid', # Google click identifier
-    'gclsrc', # Google Ads
-    'dclid', # DoubleClick click identifier (now Google)
-    'zanpid', # zanox click identifier (now Awin)
-    'utm_id', # Identifies which ads campaign this referral references.
-    'utm_source', # Identifies which site sent the traffic
-    'utm_source_platform', # Specifies the platform (like Instagram or desktop) used to deliver traffic.
-    'utm_Creative_format', # Identifies the format of the ad creative
-    'utm_campaign', # Identifies a specific product promotion or strategic campaign
-    'utm_medium', # Identifies what type of link was used
-    'utm_term', # Identifies search terms
-    'utm_content', # Identifies what specifically was clicked to bring the user to the site
-    "youtube.com``si", # YouTube specific Source identifier using "{domain}``{param}" pattern
-    "youtu.be``si", # YouTube specific Source identifier using "{domain}``{param}" pattern
+    'igshid', # Instagram share identifier
+    # Microsoft/Bing
+    'msclkid', # Microsoft Ads click identifier
+    # Twitter/X
+    'twclid', # Twitter click identifier
+    # TikTok
+    'ttclid', # TikTok click identifier
+    # LinkedIn
+    'li_fat_id', # LinkedIn first-party ad tracking
+    # Yandex
+    'yclid', # Yandex click identifier
+    # UTM family
+    'utm_id',
+    'utm_source',
+    'utm_source_platform',
+    'utm_creative_format',
+    'utm_campaign',
+    'utm_medium',
+    'utm_term',
+    'utm_content',
+    # Awin (formerly Zanox)
+    'zanpid',
+    # Email/marketing platforms
+    'mc_cid', # Mailchimp campaign ID
+    'mc_eid', # Mailchimp email ID
+    '_hsenc', # HubSpot tracking
+    '_hsmi', # HubSpot tracking
+    'mkt_tok', # Marketo token
+    '__s', # Drip email tracking
+    '_openstat', # Openstat
+    'vero_id', # Vero tracking
+    'spm', # Alibaba/AliExpress tracking
+    # Domain-specific params using "{domain}``{param}" pattern
+    "youtube.com``si",
+    "youtu.be``si",
+    "music.youtube.com``si",
+    # Amazon tracking params (applied to 20+ Amazon domains)
+    "amazon.com``sp_csd",
+    "amazon.com``pd_rd_w",
+    # ... and more (sp_csd, pd_rd_w, pd_rd_wg, pd_rd_i, pd_rd_r,
+    #     pf_rd_r, pf_rd_p, t, psc, content-id) for each Amazon domain
 ]
 # Which exit params in URL should be unwrapped
 exit = [
@@ -120,8 +154,12 @@ exit = [
         "next",
     ],
     [
-        "(www.|)(encrypted.|)google.(at|be|ca|ch|co.(bw|il|uk)|com(|.(ar|au|br|eg|tr|tw))|cl|de|dk|es|fr|nl|pl|se)/url",
+        "(www.|)(encrypted.|)google.(at|be|ca|ch|co.(bw|il|in|jp|nz|uk|za)|com(|.(ar|au|br|eg|mx|sg|tr|tw))|cl|de|dk|es|fr|it|nl|pl|pt|ru|se)/url",
         "url",
+    ],
+    [
+        "bing.com/ck/a",
+        "u",
     ],
     [
         "l.instagram.com/",
