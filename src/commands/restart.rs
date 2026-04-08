@@ -15,7 +15,6 @@ pub fn execute() -> Result<(), String> {
         crate::signal::send_signal(pid, nix::sys::signal::Signal::SIGTERM)?;
         println!("Sent stop signal to clink (PID {pid}).");
 
-        // Wait for process to exit
         for _ in 0..50 {
             if !runtime::is_running(pid) {
                 println!("clink stopped.");

@@ -227,7 +227,6 @@ mod tests {
     #[test]
     fn test_default_params_include_common_trackers() {
         let cfg = ClinkConfig::default();
-        // Core trackers that should be present
         for param in [
             "fbclid",
             "gclid",
