@@ -31,9 +31,9 @@ impl Clink {
         }
     }
 
-    pub fn find_and_replace(&self, str: &str) -> String {
-        let mut res = str.to_string();
-        for link in self.finder.links(str) {
+    pub fn find_and_replace(&self, input: &str) -> String {
+        let mut res = input.to_string();
+        for link in self.finder.links(input) {
             let mut l = Url::parse(self.unwrap_exit_params(link.as_str()).as_str())
                 .expect("url to be parsable");
             let query = self.process_query(
@@ -92,16 +92,18 @@ impl Clink {
         }
     }
 
+    fn is_tracked_param(&self, key: &str, domain: Option<&str>) -> bool {
+        self.config.params.contains(key)
+            || domain.is_some_and(|d| self.config.params.contains(&format!("{d}``{key}")))
+    }
+
     fn filter(
         &self,
         query: impl Iterator<Item = (String, String)>,
         domain: Option<&str>,
     ) -> Vec<(String, String)> {
         query
-            .filter(|(key, _)| {
-                !self.config.params.contains(key)
-                    && domain.is_none_or(|d| !self.config.params.contains(&format!("{d}``{key}")))
-            })
+            .filter(|(key, _)| !self.is_tracked_param(key, domain))
             .collect()
     }
 
@@ -112,14 +114,8 @@ impl Clink {
     ) -> Vec<(String, String)> {
         query
             .map(|(key, value)| {
-                if self.config.params.contains(&key) {
+                if self.is_tracked_param(&key, domain) {
                     (key, self.config.replace_to.clone())
-                } else if let Some(domain) = domain {
-                    if self.config.params.contains(&format!("{domain}``{key}")) {
-                        (key, self.config.replace_to.clone())
-                    } else {
-                        (key, value)
-                    }
                 } else {
                     (key, value)
                 }
@@ -128,7 +124,9 @@ impl Clink {
     }
 
     fn unwrap_exit_params(&self, url: &str) -> String {
-        let l = Url::parse(url).unwrap();
+        let Ok(l) = Url::parse(url) else {
+            return url.to_string();
+        };
         let domain = l.domain().unwrap_or("");
         let path = join_url(domain, l.path());
         if let Some(params) = self.exit_map.get(&path) {

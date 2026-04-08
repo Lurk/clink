@@ -6,24 +6,41 @@ use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::{thread, time::Duration};
 
-#[allow(clippy::too_many_lines)]
+fn log(verbose: bool, msg: &str) {
+    let stamped = format!(
+        "[{}] {msg}",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+    );
+    if verbose {
+        println!("{stamped}");
+    }
+    let _ = runtime::append_log(&stamped);
+}
+
+fn log_err(msg: &str) {
+    let stamped = format!(
+        "[{}] {msg}",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+    );
+    eprintln!("{stamped}");
+    let _ = runtime::append_log(&stamped);
+}
+
 pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
     runtime::write_pid_file()?;
 
     #[cfg(unix)]
     let signals = crate::signal::install_signal_handlers();
 
-    let log_msg = format!(
-        "[{}] clink {} started (PID {}, config: {})",
-        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-        env!("CARGO_PKG_VERSION"),
-        std::process::id(),
-        config_path.display()
+    log(
+        verbose,
+        &format!(
+            "clink {} started (PID {}, config: {})",
+            env!("CARGO_PKG_VERSION"),
+            std::process::id(),
+            config_path.display()
+        ),
     );
-    if verbose {
-        println!("{log_msg}");
-    }
-    let _ = runtime::append_log(&log_msg);
 
     let mut cfg: ClinkConfig = load_config(config_path)?;
     cfg.verbose = verbose;
@@ -42,50 +59,26 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
         #[cfg(unix)]
         {
             if signals.shutdown_requested.load(Ordering::SeqCst) {
-                let msg = format!(
-                    "[{}] clink shutting down (SIGTERM)",
-                    chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
-                );
-                if verbose {
-                    println!("{msg}");
-                }
-                let _ = runtime::append_log(&msg);
+                log(verbose, "clink shutting down (SIGTERM)");
                 runtime::remove_pid_file();
                 return Ok(());
             }
 
             if signals.reload_requested.load(Ordering::SeqCst) {
                 signals.reload_requested.store(false, Ordering::SeqCst);
-                let msg = format!(
-                    "[{}] Reloading config from {}",
-                    chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-                    config_path.display()
+                log(
+                    verbose,
+                    &format!("Reloading config from {}", config_path.display()),
                 );
-                if verbose {
-                    println!("{msg}");
-                }
-                let _ = runtime::append_log(&msg);
 
                 match load_config(config_path) {
                     Ok(mut new_cfg) => {
                         new_cfg.verbose = verbose;
                         clink = Clink::new(new_cfg);
-                        let msg = format!(
-                            "[{}] Config reloaded successfully",
-                            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
-                        );
-                        if verbose {
-                            println!("{msg}");
-                        }
-                        let _ = runtime::append_log(&msg);
+                        log(verbose, "Config reloaded successfully");
                     }
                     Err(e) => {
-                        let msg = format!(
-                            "[{}] Failed to reload config: {e}",
-                            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
-                        );
-                        eprintln!("{msg}");
-                        let _ = runtime::append_log(&msg);
+                        log_err(&format!("Failed to reload config: {e}"));
                     }
                 }
             }
@@ -96,21 +89,9 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
                 let cleaned = clink.find_and_replace(&current_clipboard);
                 if cleaned != current_clipboard {
                     if let Err(e) = ctx.set_contents(cleaned.clone()) {
-                        let msg = format!(
-                            "[{}] Failed to set clipboard: {e}",
-                            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
-                        );
-                        eprintln!("{msg}");
-                        let _ = runtime::append_log(&msg);
+                        log_err(&format!("Failed to set clipboard: {e}"));
                     } else {
-                        let msg = format!(
-                            "[{}] Cleaned URL in clipboard",
-                            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
-                        );
-                        if verbose {
-                            println!("{msg}");
-                        }
-                        let _ = runtime::append_log(&msg);
+                        log(verbose, "Cleaned URL in clipboard");
                     }
                 }
                 previous_clipboard = cleaned;

@@ -72,11 +72,11 @@
 ///     ]
 /// );
 /// ```
-pub fn expand_string(str: &str) -> Vec<String> {
+pub fn expand_string(input: &str) -> Vec<String> {
     let mut expander: Expander = Expander::new();
     let mut accumulator: String = String::new();
     let mut just_closed: bool = false;
-    for char in str.chars() {
+    for char in input.chars() {
         match char {
             '(' => {
                 just_closed = false;

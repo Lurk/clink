@@ -17,7 +17,6 @@ fn get_default_params() -> HashSet<String> {
         "fbclid".into(),
         "gclid".into(),
         "gclsrc".into(),
-        "dclid".into(),
         "utm_id".into(),
         "utm_source_platform".into(),
         "utm_Creative_format".into(),
@@ -28,7 +27,6 @@ fn get_default_params() -> HashSet<String> {
         "utm_content".into(),
         "zanpid".into(),
         "youtube.com``si".into(),
-        "youtu.be``si".into(),
         "youtu.be``si".into(),
         "amazon.de``sp_csd".into(),
         "amazon.de``pd_rd_w".into(),
@@ -113,10 +111,9 @@ pub fn fallback_config_path(path: Option<PathBuf>) -> PathBuf {
     let p = match path {
         Some(p) => p.join("clink"),
         None => std::env::current_exe()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .to_path_buf(),
+            .ok()
+            .and_then(|p| p.parent().map(Path::to_path_buf))
+            .unwrap_or_else(|| PathBuf::from(".")),
     };
 
     p.join("config.toml")
