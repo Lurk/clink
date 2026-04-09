@@ -8,6 +8,7 @@ mod runtime;
 mod service;
 #[cfg(unix)]
 mod signal;
+mod stats;
 
 use clap::Parser;
 use cli::{Cli, Command};
@@ -27,8 +28,11 @@ fn main() {
         Some(Command::Uninstall) => commands::uninstall::execute(),
         Some(Command::Validate) => commands::validate::execute(&config_path),
         Some(Command::Reload) => commands::reload::execute(),
-        Some(Command::Restart) => commands::restart::execute(),
+        Some(Command::Restart) => commands::restart::execute(&config_path, cli.verbose),
         Some(Command::State) => commands::state::execute(),
+        Some(Command::Config { diff, reset }) => {
+            commands::config::execute(&config_path, diff, reset)
+        }
     };
 
     if let Err(e) = result {

@@ -9,7 +9,15 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use url::Url;
 
-const QUERY_COMPONENT: &AsciiSet = &CONTROLS.add(b' ').add(b'#').add(b'&').add(b'=').add(b'+');
+const QUERY_COMPONENT_KEY: &AsciiSet = &CONTROLS.add(b' ').add(b'#').add(b'&').add(b'=').add(b'+');
+const QUERY_COMPONENT_VALUE: &AsciiSet = &CONTROLS.add(b' ').add(b'#').add(b'&').add(b'+');
+
+pub struct CleanResult {
+    pub text: String,
+    pub urls_cleaned: u32,
+    pub params_removed: u32,
+    pub exits_unwrapped: u32,
+}
 
 pub struct Clink {
     config: ClinkConfig,
@@ -34,15 +42,28 @@ impl Clink {
         }
     }
 
-    pub fn find_and_replace(&self, input: &str) -> String {
+    pub fn find_and_replace(&self, input: &str) -> CleanResult {
         let mut res = input.to_string();
+        let mut urls_cleaned: u32 = 0;
+        let mut params_removed: u32 = 0;
+        let mut exits_unwrapped: u32 = 0;
+
         for link in self.finder.links(input) {
-            let mut l = Url::parse(self.unwrap_exit_params(link.as_str()).as_str())
-                .expect("url to be parsable");
+            let (unwrapped, was_exit) = self.unwrap_exit_params(link.as_str());
+            if was_exit {
+                exits_unwrapped += 1;
+            }
+            let mut l = Url::parse(unwrapped.as_str()).expect("url to be parsable");
+            let normalized_original = l.to_string();
+            #[allow(clippy::cast_possible_truncation)]
+            let original_param_count = l.query_pairs().count() as u32;
             let query = self.process_query(
                 l.query_pairs().map(|(k, v)| (k.to_string(), v.to_string())),
                 l.domain().map(|d| d.strip_prefix("www.").unwrap_or(d)),
             );
+            #[allow(clippy::cast_possible_truncation)]
+            let new_param_count = query.len() as u32;
+            let removed = original_param_count.saturating_sub(new_param_count);
             l.set_query(None);
             if !query.is_empty() {
                 let qs = query
@@ -50,17 +71,29 @@ impl Clink {
                     .map(|(k, v)| {
                         format!(
                             "{}={}",
-                            utf8_percent_encode(k, QUERY_COMPONENT),
-                            utf8_percent_encode(v, QUERY_COMPONENT),
+                            utf8_percent_encode(k, QUERY_COMPONENT_KEY),
+                            utf8_percent_encode(v, QUERY_COMPONENT_VALUE),
                         )
                     })
                     .collect::<Vec<_>>()
                     .join("&");
                 l.set_query(Some(&qs));
             }
-            res = res.replace(link.as_str(), l.as_str());
+            let new_url = l.as_str();
+            let query_changed = new_url != normalized_original;
+            if query_changed || was_exit {
+                urls_cleaned += 1;
+                params_removed += removed;
+                res = res.replace(link.as_str(), new_url);
+            }
         }
-        res
+
+        CleanResult {
+            text: res,
+            urls_cleaned,
+            params_removed,
+            exits_unwrapped,
+        }
     }
 
     fn process_query(
@@ -134,24 +167,24 @@ impl Clink {
             .collect()
     }
 
-    fn unwrap_exit_params(&self, url: &str) -> String {
+    fn unwrap_exit_params(&self, url: &str) -> (String, bool) {
         let Ok(l) = Url::parse(url) else {
-            return url.to_string();
+            return (url.to_string(), false);
         };
         let domain = l.domain().unwrap_or("");
         let path = join_url(domain, l.path());
         if let Some(params) = self.exit_map.get(&path) {
             let exit = l
                 .query_pairs()
-                .filter(|p| params.contains(&p.0.clone().into()))
+                .filter(|p| params.contains(&p.0.clone().into()) && !p.1.is_empty())
                 .map(|p| p.1.to_string())
                 .take(1)
                 .collect::<String>();
             if !exit.is_empty() {
-                return exit;
+                return (exit, true);
             }
         }
-        url.to_string()
+        (url.to_string(), false)
     }
 }
 
@@ -190,7 +223,7 @@ mod find_and_replace {
         assert_eq!(
             clink.find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
-            ),
+            ).text,
             "https://test.test/"
         );
     }
@@ -201,7 +234,7 @@ mod find_and_replace {
         assert_eq!(
             clink.find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
-            ),
+            ).text,
             "https://test.test/?utm_source=your_mom"
         );
     }
@@ -212,7 +245,7 @@ mod find_and_replace {
         assert_ne!(
             clink.find_and_replace(
                 "https://test.test/?fbclid=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_source=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_campaign=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_medium=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs",
-            ),
+            ).text,
             "https://test.test/?fbclid=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_source=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_campaign=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs&utm_medium=IwAR3l6qn8TzOT254dIa7jBAM1dG3OHn3f8ZoRGsADTmqG1Zfmmko-oRhE8Qs"
         );
     }
@@ -220,12 +253,12 @@ mod find_and_replace {
     fn should_preserve_query() {
         let clink = Clink::new(ClinkConfig::default());
         assert_eq!(
-            clink.find_and_replace("https://test.test/?abc=abc",),
+            clink.find_and_replace("https://test.test/?abc=abc",).text,
             "https://test.test/?abc=abc"
         );
         let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
         assert_eq!(
-            clink.find_and_replace("https://test.test/?abc=abc",),
+            clink.find_and_replace("https://test.test/?abc=abc",).text,
             "https://test.test/?abc=abc&utm_source=your_mom"
         );
     }
@@ -233,12 +266,16 @@ mod find_and_replace {
     fn multiple_params() {
         let clink = Clink::new(ClinkConfig::default());
         assert_eq!(
-            clink.find_and_replace("https://test.test/?abc=abc&fbclid=flksj",),
+            clink
+                .find_and_replace("https://test.test/?abc=abc&fbclid=flksj",)
+                .text,
             "https://test.test/?abc=abc"
         );
         let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
         assert_eq!(
-            clink.find_and_replace("https://test.test/?abc=abc&fbclid=flksj",),
+            clink
+                .find_and_replace("https://test.test/?abc=abc&fbclid=flksj",)
+                .text,
             "https://test.test/?abc=abc&utm_source=your_mom"
         );
     }
@@ -248,14 +285,14 @@ mod find_and_replace {
         assert_eq!(
             clink.find_and_replace(
                 "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
-            ),
+            ).text,
             "https://test.test/?abc=abc\nhttps://test.test/?abc=abc"
         );
         let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
         assert_eq!(
             clink.find_and_replace(
                 "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
-            ),
+            ).text,
             "https://test.test/?abc=abc&utm_source=your_mom\nhttps://test.test/?abc=abc&utm_source=your_mom"
         );
     }
@@ -265,14 +302,14 @@ mod find_and_replace {
         assert_eq!(
             clink.find_and_replace(
                 "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
-            ),
+            ).text,
             "some text here https://test.test/?abc=abc here \nand herehttps://test.test/?abc=abc"
         );
         let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
         assert_eq!(
             clink.find_and_replace(
                 "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
-            ),
+            ).text,
             "some text here https://test.test/?abc=abc&utm_source=your_mom here \nand herehttps://test.test/?abc=abc&utm_source=your_mom"
         );
     }
@@ -282,7 +319,7 @@ mod find_and_replace {
         assert_eq!(
             clink.find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
-            ),
+            ).text,
             "https://test.test/?fbclid=clink&utm_source=clink&utm_campaign=clink&utm_medium=clink"
         );
     }
@@ -298,7 +335,9 @@ mod find_and_replace {
             verbose: false,
         });
         assert_eq!(
-            clink.find_and_replace("https://test.test/?foo=dsadsa",),
+            clink
+                .find_and_replace("https://test.test/?foo=dsadsa",)
+                .text,
             "https://test.test/?foo=clink"
         );
     }
@@ -308,29 +347,39 @@ mod find_and_replace {
         let clink = Clink::new(ClinkConfig::default());
 
         assert_eq!(
-            clink.find_and_replace("https://youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH",),
+            clink
+                .find_and_replace("https://youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH",)
+                .text,
             "https://youtu.be/dQw4w9WgXcQ"
         );
 
         assert_eq!(
-            clink.find_and_replace("https://www.youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH",),
+            clink
+                .find_and_replace("https://www.youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH",)
+                .text,
             "https://www.youtu.be/dQw4w9WgXcQ"
         );
 
         assert_eq!(
-            clink.find_and_replace("https://youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69",),
+            clink
+                .find_and_replace("https://youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69",)
+                .text,
             "https://youtu.be/dQw4w9WgXcQ?t=69"
         );
 
         assert_eq!(
-            clink.find_and_replace(
-                "https://youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69&fbclid=clid",
-            ),
+            clink
+                .find_and_replace(
+                    "https://youtu.be/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69&fbclid=clid",
+                )
+                .text,
             "https://youtu.be/dQw4w9WgXcQ?t=69"
         );
 
         assert_eq!(
-            clink.find_and_replace("https://test.test/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69",),
+            clink
+                .find_and_replace("https://test.test/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69",)
+                .text,
             "https://test.test/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69"
         );
 
@@ -338,25 +387,25 @@ mod find_and_replace {
         assert_eq!(
             clink.find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa&si=qweasd",
-            ),
+            ).text,
             "https://test.test/?fbclid=clink&utm_source=clink&utm_campaign=clink&utm_medium=clink&si=qweasd"
         );
 
         assert_eq!(
             clink.find_and_replace(
                 "https://youtu.be/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa&si=qweasd",
-            ),
+            ).text,
             "https://youtu.be/?fbclid=clink&utm_source=clink&utm_campaign=clink&utm_medium=clink&si=clink"
         );
 
         let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
         assert_eq!(
-            clink.find_and_replace("https://test.test/?si=dsadsa",),
+            clink.find_and_replace("https://test.test/?si=dsadsa",).text,
             "https://test.test/?si=dsadsa&utm_source=your_mom"
         );
 
         assert_eq!(
-            clink.find_and_replace("https://youtu.be/?si=dsadsa",),
+            clink.find_and_replace("https://youtu.be/?si=dsadsa",).text,
             "https://youtu.be/?utm_source=your_mom"
         );
     }
@@ -365,9 +414,89 @@ mod find_and_replace {
     fn preserves_unwise_characters_in_query() {
         let clink = Clink::new(ClinkConfig::default());
         assert_eq!(
-            clink.find_and_replace("https://foo.foo/?param[]=1&param[]=2&fbclid=abc"),
+            clink
+                .find_and_replace("https://foo.foo/?param[]=1&param[]=2&fbclid=abc")
+                .text,
             "https://foo.foo/?param[]=1&param[]=2"
         );
+    }
+
+    #[test]
+    fn clean_result_counts_urls_cleaned() {
+        let clink = Clink::new(ClinkConfig::default());
+        let result = clink.find_and_replace("https://test.test/?fbclid=abc");
+        assert_eq!(result.urls_cleaned, 1);
+        assert_eq!(result.text, "https://test.test/");
+    }
+
+    #[test]
+    fn clean_result_counts_params_removed() {
+        let clink = Clink::new(ClinkConfig::default());
+        let result = clink
+            .find_and_replace("https://test.test/?fbclid=abc&utm_source=x&utm_medium=y&keep=yes");
+        assert_eq!(result.params_removed, 3);
+        assert_eq!(result.text, "https://test.test/?keep=yes");
+    }
+
+    #[test]
+    fn clean_result_counts_exits_unwrapped() {
+        let clink = Clink::new(ClinkConfig::default());
+        let result = clink.find_and_replace("https://exit.sc/?url=https%3A%2F%2Fexample.com");
+        assert_eq!(result.exits_unwrapped, 1);
+    }
+
+    #[test]
+    fn instagram_igsh_stripped() {
+        let clink = Clink::new(ClinkConfig::default());
+        assert_eq!(
+            clink
+                .find_and_replace(
+                    "https://www.instagram.com/reel/DW5mth4tEGv/?igsh=MXN0MGRuMGtyODJwNQ=="
+                )
+                .text,
+            "https://www.instagram.com/reel/DW5mth4tEGv/"
+        );
+    }
+
+    #[test]
+    fn preserves_equals_in_query_values() {
+        let clink = Clink::new(ClinkConfig::default());
+        assert_eq!(
+            clink
+                .find_and_replace("https://foo.foo/?token=abc123==&fbclid=abc")
+                .text,
+            "https://foo.foo/?token=abc123=="
+        );
+    }
+
+    #[test]
+    fn clean_result_no_changes() {
+        let clink = Clink::new(ClinkConfig::default());
+        let result = clink.find_and_replace("https://test.test/?keep=yes");
+        assert_eq!(result.urls_cleaned, 0);
+        assert_eq!(result.params_removed, 0);
+        assert_eq!(result.exits_unwrapped, 0);
+    }
+
+    #[test]
+    fn normalization_only_not_counted_as_cleaned() {
+        let clink = Clink::new(ClinkConfig::default());
+        // Url::parse normalizes "https://example.com" to "https://example.com/"
+        // This should NOT count as a cleaned URL or modify the text
+        let result = clink.find_and_replace("https://example.com");
+        assert_eq!(result.urls_cleaned, 0);
+        assert_eq!(result.params_removed, 0);
+        assert_eq!(result.text, "https://example.com");
+    }
+
+    #[test]
+    fn clean_result_multiple_urls() {
+        let clink = Clink::new(ClinkConfig::default());
+        let result = clink.find_and_replace(
+            "https://test.test/?fbclid=a\nhttps://test.test/?utm_source=b&utm_medium=c",
+        );
+        assert_eq!(result.urls_cleaned, 2);
+        assert_eq!(result.params_removed, 3);
     }
 }
 
@@ -381,14 +510,14 @@ mod unwrap_exit_params {
         assert_eq!(
             clink.unwrap_exit_params(
                 "https://exit.sc/?url=https%3A%2F%2Fopen.spotify.com%2Fartist%2F3tEV3J5gW5BDMrJqE3NaBy%3Fsi%3D1mLk6MZSRGuol8rgwCe_Cg"
-            ),
+            ).0,
             "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
         );
 
         assert_eq!(
         clink.unwrap_exit_params(
             "https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjMuu2zrreBAxUt2gIHHaDVC_gQyCl6BAgqEAM&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ&usg=AOvVaw0aHtehaphMhOCAkCydRLZU&opi=89978449"
-        ),
+        ).0,
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     )
     }
@@ -399,7 +528,7 @@ mod unwrap_exit_params {
         assert_eq!(
             clink.unwrap_exit_params(
                 "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
-            ),
+            ).0,
             "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
         );
     }
@@ -409,7 +538,21 @@ mod unwrap_exit_params {
         let clink = Clink::new(ClinkConfig::default());
         assert_eq!(
             clink
-                .unwrap_exit_params("https://www.google.it/url?url=https%3A%2F%2Fexample.com&sa=t"),
+                .unwrap_exit_params("https://www.google.it/url?url=https%3A%2F%2Fexample.com&sa=t")
+                .0,
+            "https://example.com"
+        );
+    }
+
+    #[test]
+    fn has_exit_url_google_q_param() {
+        let clink = Clink::new(ClinkConfig::default());
+        assert_eq!(
+            clink
+                .unwrap_exit_params(
+                    "https://www.google.com/url?q=https%3A%2F%2Fexample.com&sa=t&usg=abc123"
+                )
+                .0,
             "https://example.com"
         );
     }
@@ -418,7 +561,9 @@ mod unwrap_exit_params {
     fn has_exit_url_bing() {
         let clink = Clink::new(ClinkConfig::default());
         assert_eq!(
-            clink.unwrap_exit_params("https://bing.com/ck/a?u=https%3A%2F%2Fexample.com&foo=bar"),
+            clink
+                .unwrap_exit_params("https://bing.com/ck/a?u=https%3A%2F%2Fexample.com&foo=bar")
+                .0,
             "https://example.com"
         );
     }
@@ -427,9 +572,11 @@ mod unwrap_exit_params {
     fn amazon_com_tracking_stripped() {
         let clink = Clink::new(ClinkConfig::default());
         assert_eq!(
-            clink.find_and_replace(
-                "https://www.amazon.com/dp/B08N5WRWNW?sp_csd=d2lkZ2V0TmFtZQ&pd_rd_w=abc&ref=foo"
-            ),
+            clink
+                .find_and_replace(
+                    "https://www.amazon.com/dp/B08N5WRWNW?sp_csd=d2lkZ2V0TmFtZQ&pd_rd_w=abc&ref=foo"
+                )
+                .text,
             "https://www.amazon.com/dp/B08N5WRWNW?ref=foo"
         );
     }
@@ -438,9 +585,11 @@ mod unwrap_exit_params {
     fn youtube_music_si_stripped() {
         let clink = Clink::new(ClinkConfig::default());
         assert_eq!(
-            clink.find_and_replace(
-                "https://music.youtube.com/watch?v=dQw4w9WgXcQ&si=NblIBgit-qHN7MoH"
-            ),
+            clink
+                .find_and_replace(
+                    "https://music.youtube.com/watch?v=dQw4w9WgXcQ&si=NblIBgit-qHN7MoH"
+                )
+                .text,
             "https://music.youtube.com/watch?v=dQw4w9WgXcQ"
         );
     }
@@ -449,7 +598,7 @@ mod unwrap_exit_params {
     fn has_exit_url_but_no_exit_param() {
         let clink = Clink::new(ClinkConfig::default());
         assert_eq!(
-            clink.unwrap_exit_params("https://exit.sc/?foo=bar"),
+            clink.unwrap_exit_params("https://exit.sc/?foo=bar").0,
             "https://exit.sc/?foo=bar"
         );
     }

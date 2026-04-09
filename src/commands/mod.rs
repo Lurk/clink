@@ -1,3 +1,4 @@
+pub mod config;
 pub mod init;
 pub mod install;
 pub mod reload;

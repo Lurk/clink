@@ -38,6 +38,15 @@ pub enum Command {
     Restart,
     /// Show current state and last log entries
     State,
+    /// Show config info
+    Config {
+        /// Show differences between current config and defaults
+        #[arg(long)]
+        diff: bool,
+        /// Reset config to defaults
+        #[arg(long)]
+        reset: bool,
+    },
 }
 
 #[cfg(test)]
@@ -73,6 +82,15 @@ mod tests {
             let cli = Cli::parse_from(["clink", arg]);
             assert_eq!(format!("{:?}", cli.command.unwrap()), expected);
         }
+
+        let cli = Cli::parse_from(["clink", "config"]);
+        assert!(matches!(
+            cli.command,
+            Some(Command::Config {
+                diff: false,
+                reset: false
+            })
+        ));
     }
 
     #[test]
@@ -97,5 +115,29 @@ mod tests {
 
         let cli = Cli::parse_from(["clink", "run", "--verbose"]);
         assert!(cli.verbose);
+    }
+
+    #[test]
+    fn test_parse_config_diff() {
+        let cli = Cli::parse_from(["clink", "config", "--diff"]);
+        assert!(matches!(
+            cli.command,
+            Some(Command::Config {
+                diff: true,
+                reset: false
+            })
+        ));
+    }
+
+    #[test]
+    fn test_parse_config_reset() {
+        let cli = Cli::parse_from(["clink", "config", "--reset"]);
+        assert!(matches!(
+            cli.command,
+            Some(Command::Config {
+                diff: false,
+                reset: true
+            })
+        ));
     }
 }

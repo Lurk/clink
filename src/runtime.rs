@@ -10,6 +10,10 @@ pub fn log_file_path() -> PathBuf {
     data_dir().join("clink.log")
 }
 
+pub fn stats_file_path() -> PathBuf {
+    data_dir().join("stats.toml")
+}
+
 fn runtime_dir() -> PathBuf {
     #[cfg(target_os = "macos")]
     {
@@ -25,7 +29,7 @@ fn runtime_dir() -> PathBuf {
     }
 }
 
-fn data_dir() -> PathBuf {
+pub fn data_dir() -> PathBuf {
     dirs_next::data_dir().map_or_else(|| PathBuf::from("."), |d| d.join("clink"))
 }
 

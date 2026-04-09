@@ -1,6 +1,7 @@
 use crate::clink::Clink;
 use crate::config::{ClinkConfig, load_config};
 use crate::runtime;
+use crate::stats;
 use copypasta::{ClipboardContext, ClipboardProvider};
 use std::path::Path;
 use std::sync::atomic::Ordering;
@@ -54,12 +55,16 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
     let mut ctx: ClipboardContext =
         ClipboardContext::new().map_err(|e| format!("Failed to access clipboard: {e}"))?;
     let mut previous_clipboard = String::new();
+    let stats_path = runtime::stats_file_path();
+    let mut statistics = stats::load(&stats_path);
+    statistics.reset_session();
 
     loop {
         #[cfg(unix)]
         {
             if signals.shutdown_requested.load(Ordering::SeqCst) {
                 log(verbose, "clink shutting down (SIGTERM)");
+                let _ = stats::save(&statistics, &stats_path);
                 runtime::remove_pid_file();
                 return Ok(());
             }
@@ -86,15 +91,25 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
 
         if let Ok(current_clipboard) = ctx.get_contents() {
             if previous_clipboard != current_clipboard {
-                let cleaned = clink.find_and_replace(&current_clipboard);
-                if cleaned != current_clipboard {
-                    if let Err(e) = ctx.set_contents(cleaned.clone()) {
+                statistics.check_rollovers();
+                statistics.increment(0, 0, 0, 1);
+                let result = clink.find_and_replace(&current_clipboard);
+                if result.text != current_clipboard {
+                    statistics.increment(
+                        result.urls_cleaned,
+                        result.params_removed,
+                        result.exits_unwrapped,
+                        0,
+                    );
+                    if let Err(e) = ctx.set_contents(result.text.clone()) {
                         log_err(&format!("Failed to set clipboard: {e}"));
-                    } else {
-                        log(verbose, "Cleaned URL in clipboard");
+                    }
+
+                    if let Err(e) = stats::save(&statistics, &stats_path) {
+                        log_err(&format!("Failed to save stats: {e}"));
                     }
                 }
-                previous_clipboard = cleaned;
+                previous_clipboard = result.text;
             }
         }
         thread::sleep(sleep_duration);

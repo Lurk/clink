@@ -132,11 +132,8 @@ params = [
     "youtube.com``si",
     "youtu.be``si",
     "music.youtube.com``si",
-    # Amazon tracking params (applied to 20+ Amazon domains)
-    "amazon.com``sp_csd",
-    "amazon.com``pd_rd_w",
-    # ... and more (sp_csd, pd_rd_w, pd_rd_wg, pd_rd_i, pd_rd_r,
-    #     pf_rd_r, pf_rd_p, t, psc, content-id) for each Amazon domain
+    # Amazon tracking params — pattern expands to 210 domain/param combinations
+    "amazon.(com|de|co.uk|co.jp|fr|it|es|ca|com.au|com.br|com.mx|nl|pl|se|sg|in|com.be|com.tr|eg|sa|ae)``(sp_csd|pd_rd_w|pd_rd_wg|pd_rd_i|pd_rd_r|pf_rd_r|pf_rd_p|t|psc|content-id)",
 ]
 # Which exit params in URL should be unwrapped
 exit = [
@@ -200,7 +197,7 @@ Sleep duration between clipboard data pulls in milliseconds.
 
 ### params
 
-Array of GET query params to apply chosen mode
+Array of GET query params to apply chosen mode. Params support the same group expansion syntax as exit entries — e.g., `(foo|bar)` expands to both `foo` and `bar`. Patterns are expanded at config load time.
 
 ### exit
 
