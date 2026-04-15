@@ -1,0 +1,100 @@
+# Clink configuration
+# https://github.com/Lurk/clink
+
+# Processing mode for tracking parameters:
+#   remove   — strip tracking params from URLs
+#   replace  — replace param values with `replace_to` text
+#   your_mom — remove params + add utm_source=your_mom (except Mother's Day)
+#   evil     — randomly swap characters in tracking param values
+mode = 'remove'
+
+# Replacement text used in 'replace' mode
+replace_to = 'clink'
+
+# How often clink checks the clipboard, in milliseconds
+sleep_duration = 150
+
+# Query parameters to strip/process.
+# Use "domain``param" for domain-specific params (e.g., "youtube.com``si").
+# Patterns support group expansion: (a|b) expands to both a and b.
+params = [
+    # Google
+    'dclid',
+    'gclid',
+    'gclsrc',
+    '_ga',
+    '_gl',
+    # Meta (Facebook/Instagram)
+    'fbclid',
+    'igshid',
+    'igsh',
+    # Microsoft/Bing
+    'msclkid',
+    # Twitter/X
+    'twclid',
+    # TikTok
+    'ttclid',
+    # LinkedIn
+    'li_fat_id',
+    # Yandex
+    'yclid',
+    # UTM family
+    'utm_id',
+    'utm_source',
+    'utm_source_platform',
+    'utm_creative_format',
+    'utm_medium',
+    'utm_term',
+    'utm_campaign',
+    'utm_content',
+    # Awin (formerly Zanox)
+    'zanpid',
+    # Mailchimp
+    'mc_cid',
+    'mc_eid',
+    # HubSpot
+    '_hsenc',
+    '_hsmi',
+    # Marketo
+    'mkt_tok',
+    # Drip
+    '__s',
+    # Openstat
+    '_openstat',
+    # Vero
+    'vero_id',
+    # Alibaba/AliExpress
+    'spm',
+    # YouTube (domain-specific)
+    'youtube.com``si',
+    'youtu.be``si',
+    'music.youtube.com``si',
+    # Amazon tracking params across all domains
+    'amazon.(com|de|co.uk|co.jp|fr|it|es|ca|com.au|com.br|com.mx|nl|pl|se|sg|in|com.be|com.tr|eg|sa|ae)``(sp_csd|pd_rd_w|pd_rd_wg|pd_rd_i|pd_rd_r|pf_rd_r|pf_rd_p|t|psc|content-id)',
+]
+
+# Exit URL unwrapping rules.
+# Each entry is [url_pattern, param1, param2, ...].
+# When clink finds a URL matching url_pattern, it extracts the real destination
+# from the listed query parameters and follows the redirect transparently.
+# Patterns support the same group expansion as params.
+exit = [
+    ['vk.com/away.php', 'to'],
+    ['exit.sc/', 'url'],
+    ['facebook.com/(l|confirmemail|login).php', 'u', 'next'],
+    ['(www.|)google.(at|be|ca|ch|co.(bw|id|il|in|jp|kr|nz|th|uk|za)|com(|.(ar|au|br|co|eg|hk|mx|sg|tr|tw|ua))|cl|cz|de|dk|es|fi|fr|gr|hu|ie|it|nl|no|pl|pt|ro|se)/url', 'url', 'q'],
+    ['bing.com/ck/a', 'u'],
+    ['l.instagram.com/', 'u'],
+    ['youtube.com/redirect', 'q'],
+    ['linkedin.com/authwall', 'sessionRedirect'],
+    ['mora.jp/cart', 'returnUrl'],
+]
+
+# Optional: fetch params and exit rules from a remote URL.
+# Supported formats:
+#   clearurls — ClearURLs rules.json (https://docs.clearurls.xyz/1.26.1/specs/rules/)
+#   clink     — native clink TOML format
+#
+# [remote]
+# url = 'https://example.com/clink-rules.toml'
+# format = 'clink'

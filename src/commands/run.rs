@@ -46,6 +46,12 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
     let mut cfg: ClinkConfig = load_config(config_path)?;
     cfg.verbose = verbose;
 
+    crate::config::resolve_patterns(&mut cfg, &runtime::data_dir());
+
+    if let Err(e) = runtime::write_loaded_config(&cfg) {
+        log_err(&format!("Failed to write loaded config: {e}"));
+    }
+
     if verbose {
         println!("Config ({}):\n {cfg:#?}", config_path.display());
     }
@@ -66,6 +72,7 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
                 log(verbose, "clink shutting down (SIGTERM)");
                 let _ = stats::save(&statistics, &stats_path);
                 runtime::remove_pid_file();
+                runtime::remove_loaded_config();
                 return Ok(());
             }
 
@@ -79,6 +86,10 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
                 match load_config(config_path) {
                     Ok(mut new_cfg) => {
                         new_cfg.verbose = verbose;
+                        crate::config::resolve_patterns(&mut new_cfg, &runtime::data_dir());
+                        if let Err(e) = runtime::write_loaded_config(&new_cfg) {
+                            log_err(&format!("Failed to write loaded config: {e}"));
+                        }
                         clink = Clink::new(new_cfg);
                         log(verbose, "Config reloaded successfully");
                     }

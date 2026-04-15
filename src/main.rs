@@ -1,3 +1,4 @@
+mod clearurls;
 mod cli;
 mod clink;
 mod commands;
@@ -33,6 +34,7 @@ fn main() {
         Some(Command::Config { diff, reset }) => {
             commands::config::execute(&config_path, diff, reset)
         }
+        Some(Command::Update) => commands::update::execute(&config_path),
     };
 
     if let Err(e) = result {

@@ -9,92 +9,43 @@ use serde::{Deserialize, Serialize};
 use crate::expand_string::expand_string;
 use crate::mode::Mode;
 
-/// Add query param, that must be replaced within any domain.
-/// To specify domain specific params use format
-/// `"{domain}``{param}"`.
-///
-/// Patterns may use `expand_string` notation (e.g. `(a|b)`) which is
-/// expanded at runtime. Use `get_default_raw_params` when you need the
-/// compact, pre-expansion form (e.g. for display in diffs).
-const DEFAULT_RAW_PARAMS: &[&str] = &[
-    // Google
-    "dclid",
-    "gclid",
-    "gclsrc",
-    "_ga",
-    "_gl",
-    // Meta (Facebook/Instagram)
-    "fbclid",
-    "igshid",
-    "igsh",
-    // Microsoft/Bing
-    "msclkid",
-    // Twitter/X
-    "twclid",
-    // TikTok
-    "ttclid",
-    // LinkedIn
-    "li_fat_id",
-    // Yandex
-    "yclid",
-    // UTM family
-    "utm_id",
-    "utm_source",
-    "utm_source_platform",
-    "utm_creative_format",
-    "utm_medium",
-    "utm_term",
-    "utm_campaign",
-    "utm_content",
-    // Awin (formerly Zanox)
-    "zanpid",
-    // Mailchimp
-    "mc_cid",
-    "mc_eid",
-    // HubSpot
-    "_hsenc",
-    "_hsmi",
-    // Marketo
-    "mkt_tok",
-    // Drip
-    "__s",
-    // Openstat
-    "_openstat",
-    // Vero
-    "vero_id",
-    // Alibaba/AliExpress
-    "spm",
-    // YouTube (domain-specific)
-    "youtube.com``si",
-    "youtu.be``si",
-    "music.youtube.com``si",
-    // Amazon tracking params across all domains
-    "amazon.(com|de|co.uk|co.jp|fr|it|es|ca|com.au|com.br|com.mx|nl|pl|se|sg|in|com.be|com.tr|eg|sa|ae)``(sp_csd|pd_rd_w|pd_rd_wg|pd_rd_i|pd_rd_r|pf_rd_r|pf_rd_p|t|psc|content-id)",
-];
-
-pub fn get_default_raw_params() -> &'static [&'static str] {
-    DEFAULT_RAW_PARAMS
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RemotePatterns {
+    pub params: HashSet<String>,
+    pub exit: Vec<Vec<Rc<str>>>,
 }
 
-fn get_default_params() -> HashSet<String> {
-    DEFAULT_RAW_PARAMS
-        .iter()
-        .flat_map(|entry| expand_string(entry))
-        .collect()
+pub fn resolve_patterns(config: &mut ClinkConfig, data_dir: &Path) {
+    let cache_path = data_dir.join("remote_patterns.toml");
+    let Ok(content) = std::fs::read_to_string(&cache_path) else {
+        return;
+    };
+    let Ok(remote) = toml::from_str::<RemotePatterns>(&content) else {
+        return;
+    };
+
+    let local_params = std::mem::take(&mut config.params);
+    let local_exit = std::mem::take(&mut config.exit);
+
+    config.params = remote.params;
+    config.exit = remote.exit;
+
+    config.params.extend(local_params);
+    config.exit.extend(local_exit);
 }
 
-fn get_default_exit() -> Vec<Vec<Rc<str>>> {
-    vec![
-    vec!["vk.com/away.php".into(), "to".into()],
-    vec!["exit.sc/".into(), "url".into()],
-    vec!["facebook.com/(l|confirmemail|login).php".into(), "u".into(), "next".into()],
-    vec!["(www.|)google.(at|be|ca|ch|co.(bw|id|il|in|jp|kr|nz|th|uk|za)|com(|.(ar|au|br|co|eg|hk|mx|sg|tr|tw|ua))|cl|cz|de|dk|es|fi|fr|gr|hu|ie|it|nl|no|pl|pt|ro|se)/url".into(), "url".into(), "q".into()],
-    vec!["bing.com/ck/a".into(), "u".into()],
-    vec!["l.instagram.com/".into(), "u".into()],
-    vec!["youtube.com/redirect".into(), "q".into()],
-    vec!["linkedin.com/authwall".into(), "sessionRedirect".into()],
-    vec!["mora.jp/cart".into(), "returnUrl".into()],
-    ]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum RemoteFormat {
+    #[serde(rename = "clearurls")]
+    ClearUrls,
+    #[serde(rename = "clink")]
+    Clink,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Remote {
+    pub url: String,
+    pub format: RemoteFormat,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -106,6 +57,8 @@ pub struct ClinkConfig {
     pub exit: Vec<Vec<Rc<str>>>,
     #[serde(skip)]
     pub verbose: bool,
+    #[serde(default)]
+    pub remote: Option<Remote>,
 }
 
 impl ClinkConfig {
@@ -114,9 +67,10 @@ impl ClinkConfig {
             mode,
             replace_to: "clink".into(),
             sleep_duration: 150,
-            params: get_default_params(),
-            exit: get_default_exit(),
+            params: HashSet::new(),
+            exit: Vec::new(),
             verbose: false,
+            remote: None,
         }
     }
 
@@ -179,8 +133,8 @@ mod tests {
         let cfg = ClinkConfig::default();
         let warnings = cfg.validate();
         assert!(
-            warnings.is_empty(),
-            "default config should have no warnings"
+            warnings.iter().any(|w| w.contains("params")),
+            "default config with no params should warn"
         );
     }
 
@@ -198,137 +152,6 @@ mod tests {
         cfg.params.clear();
         let warnings = cfg.validate();
         assert!(warnings.iter().any(|w| w.contains("params")));
-    }
-
-    #[test]
-    fn test_default_params_include_common_trackers() {
-        let cfg = ClinkConfig::default();
-        for param in [
-            "fbclid",
-            "gclid",
-            "gclsrc",
-            "dclid",
-            "zanpid",
-            "msclkid",
-            "twclid",
-            "ttclid",
-            "igshid",
-            "igsh",
-            "li_fat_id",
-            "mc_cid",
-            "mc_eid",
-            "_ga",
-            "_gl",
-            "yclid",
-            "_hsenc",
-            "_hsmi",
-            "mkt_tok",
-            "__s",
-            "_openstat",
-            "vero_id",
-            "spm",
-        ] {
-            assert!(cfg.params.contains(param), "missing default param: {param}");
-        }
-    }
-
-    #[test]
-    fn test_default_params_utm_creative_format_lowercase() {
-        let cfg = ClinkConfig::default();
-        assert!(
-            cfg.params.contains("utm_creative_format"),
-            "utm_creative_format should be lowercase"
-        );
-        assert!(
-            !cfg.params.contains("utm_Creative_format"),
-            "utm_Creative_format (capital C) should not exist"
-        );
-    }
-
-    #[test]
-    fn test_default_params_amazon_com() {
-        let cfg = ClinkConfig::default();
-        // Amazon tracking params should cover .com, not just .de
-        assert!(
-            cfg.params.contains("amazon.com``sp_csd"),
-            "missing amazon.com tracking params"
-        );
-    }
-
-    #[test]
-    fn test_default_params_youtube_music() {
-        let cfg = ClinkConfig::default();
-        assert!(
-            cfg.params.contains("music.youtube.com``si"),
-            "missing music.youtube.com si param"
-        );
-    }
-
-    #[test]
-    fn test_default_params_count_unchanged() {
-        let params = get_default_params();
-        // 34 global/YouTube params + 210 Amazon domain-specific params = 244
-        assert_eq!(
-            params.len(),
-            244,
-            "total default param count must not change"
-        );
-    }
-
-    #[test]
-    fn test_amazon_pattern_expands_to_all_domain_param_combinations() {
-        use crate::expand_string::expand_string;
-
-        let pattern = "amazon.(com|de|co.uk|co.jp|fr|it|es|ca|com.au|com.br|com.mx|nl|pl|se|sg|in|com.be|com.tr|eg|sa|ae)``(sp_csd|pd_rd_w|pd_rd_wg|pd_rd_i|pd_rd_r|pf_rd_r|pf_rd_p|t|psc|content-id)";
-        let expanded: HashSet<String> = expand_string(pattern).into_iter().collect();
-
-        let domains = [
-            "amazon.com",
-            "amazon.de",
-            "amazon.co.uk",
-            "amazon.co.jp",
-            "amazon.fr",
-            "amazon.it",
-            "amazon.es",
-            "amazon.ca",
-            "amazon.com.au",
-            "amazon.com.br",
-            "amazon.com.mx",
-            "amazon.nl",
-            "amazon.pl",
-            "amazon.se",
-            "amazon.sg",
-            "amazon.in",
-            "amazon.com.be",
-            "amazon.com.tr",
-            "amazon.eg",
-            "amazon.sa",
-            "amazon.ae",
-        ];
-        let params = [
-            "sp_csd",
-            "pd_rd_w",
-            "pd_rd_wg",
-            "pd_rd_i",
-            "pd_rd_r",
-            "pf_rd_r",
-            "pf_rd_p",
-            "t",
-            "psc",
-            "content-id",
-        ];
-        let mut expected: HashSet<String> = HashSet::new();
-        for domain in &domains {
-            for param in &params {
-                expected.insert(format!("{domain}``{param}"));
-            }
-        }
-
-        assert_eq!(expanded.len(), 210, "should produce 210 combinations");
-        assert_eq!(
-            expanded, expected,
-            "pattern must produce same entries as nested loop"
-        );
     }
 
     #[test]
@@ -371,5 +194,104 @@ mod tests {
         let result = load_config(&tmp);
         assert!(result.is_err());
         let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn test_remote_config_serde_roundtrip() {
+        let cfg = ClinkConfig {
+            remote: Some(Remote {
+                url: "https://example.com/data.json".into(),
+                format: RemoteFormat::ClearUrls,
+            }),
+            ..ClinkConfig::default()
+        };
+        let toml_str = toml::to_string_pretty(&cfg).unwrap();
+        let loaded: ClinkConfig = toml::from_str(&toml_str).unwrap();
+        let remote = loaded.remote.unwrap();
+        assert_eq!(remote.url, "https://example.com/data.json");
+        assert_eq!(remote.format, RemoteFormat::ClearUrls);
+    }
+
+    #[test]
+    fn test_config_without_remote_section() {
+        let cfg = ClinkConfig::default();
+        let toml_str = toml::to_string_pretty(&cfg).unwrap();
+        let loaded: ClinkConfig = toml::from_str(&toml_str).unwrap();
+        assert!(loaded.remote.is_none());
+    }
+
+    #[test]
+    fn test_remote_patterns_serde_roundtrip() {
+        let patterns = RemotePatterns {
+            params: HashSet::from(["fbclid".into(), "gclid".into()]),
+            exit: vec![vec!["exit.sc/".into(), "url".into()]],
+        };
+        let toml_str = toml::to_string_pretty(&patterns).unwrap();
+        let loaded: RemotePatterns = toml::from_str(&toml_str).unwrap();
+        assert_eq!(loaded.params.len(), 2);
+        assert!(loaded.params.contains("fbclid"));
+        assert_eq!(loaded.exit.len(), 1);
+    }
+
+    #[test]
+    fn test_resolve_merges_remote_and_local() {
+        let dir = std::env::temp_dir().join("clink_test_resolve");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let remote = RemotePatterns {
+            params: HashSet::from(["remote_param".into(), "shared".into()]),
+            exit: vec![vec!["remote.com/".into(), "url".into()]],
+        };
+        let cache_path = dir.join("remote_patterns.toml");
+        let content = toml::to_string(&remote).unwrap();
+        std::fs::write(&cache_path, content).unwrap();
+
+        let mut cfg = ClinkConfig {
+            params: HashSet::from(["local_param".into(), "shared".into()]),
+            exit: vec![vec!["local.com/".into(), "u".into()]],
+            ..ClinkConfig::default()
+        };
+
+        resolve_patterns(&mut cfg, &dir);
+
+        assert!(
+            cfg.params.contains("remote_param"),
+            "should have remote param"
+        );
+        assert!(
+            cfg.params.contains("local_param"),
+            "should have local param"
+        );
+        assert!(cfg.params.contains("shared"), "should have shared param");
+        assert_eq!(cfg.params.len(), 3);
+        assert_eq!(
+            cfg.exit.len(),
+            2,
+            "should have both remote and local exit rules"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_resolve_no_cache_keeps_local() {
+        let dir = std::env::temp_dir().join("clink_test_resolve_no_cache");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let mut cfg = ClinkConfig {
+            params: HashSet::from(["local_param".into()]),
+            exit: vec![vec!["local.com/".into(), "u".into()]],
+            ..ClinkConfig::default()
+        };
+
+        resolve_patterns(&mut cfg, &dir);
+
+        assert_eq!(cfg.params.len(), 1);
+        assert!(cfg.params.contains("local_param"));
+        assert_eq!(cfg.exit.len(), 1);
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

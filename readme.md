@@ -33,6 +33,7 @@ Running `clink` with no subcommand starts the clipboard monitor daemon.
 | `clink reload` | Reload configuration of the running instance        |
 | `clink restart` | Restart the running instance                       |
 | `clink state` | Show current state and last log entries               |
+| `clink update` | Fetch and cache remote patterns                |
 
 ### Global options
 
@@ -61,6 +62,7 @@ clink uninstall
 clink state     # Check if clink is running and view recent log
 clink reload    # Reload config without restarting
 clink restart   # Stop the running instance
+clink update    # Fetch and cache remote patterns
 ```
 
 ## Config
@@ -229,6 +231,30 @@ will unwrap:
 Keep in mind that you do not need to have `https` and/or `http` in exit link definition. 
 
 This feature is heavily inspired by [musicbrainz-bot](https://github.com/Freso/musicbrainz-bot/blob/82e37124cdea83f639d133136809fcb898a3ff2b/exit_url_cleanup.py#L19-L38)
+
+### remote (optional)
+
+Fetch tracking patterns from a remote URL. Remote patterns serve as a base;
+your local `params` and `exit` entries are merged on top.
+
+```toml
+[remote]
+url = 'https://raw.githubusercontent.com/AMinber/ClearUrls/master/data/data.min.json'
+format = 'clearurls'
+```
+
+Supported formats:
+- `clearurls` — [ClearURLs](https://docs.clearurls.xyz) `data.min.json` (LGPLv3, maintained by Kevin R. / AMinber)
+- `clink` — clink-native TOML with `params` and `exit` fields
+
+After adding the `[remote]` section, run:
+
+```sh
+clink update
+```
+
+This fetches the remote patterns and caches them locally. Run `clink update` again
+whenever you want to pull the latest version. Then `clink reload` to apply.
 
 ## Build
 

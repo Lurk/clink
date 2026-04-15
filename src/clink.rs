@@ -216,9 +216,20 @@ mod find_and_replace {
 
     use super::*;
 
+    fn test_config(mode: Mode) -> ClinkConfig {
+        let id = std::thread::current().id();
+        let tmp = std::env::temp_dir().join(format!("clink_test_cfg_{id:?}.toml"));
+        let template = include_str!("default_config.toml");
+        std::fs::write(&tmp, template).unwrap();
+        let mut cfg = crate::config::load_config(&tmp).unwrap();
+        cfg.mode = mode;
+        let _ = std::fs::remove_file(&tmp);
+        cfg
+    }
+
     #[test]
     fn naive_default() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
 
         assert_eq!(
             clink.find_and_replace(
@@ -230,7 +241,7 @@ mod find_and_replace {
 
     #[test]
     fn naive_your_mom() {
-        let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
+        let clink = Clink::new(test_config(Mode::YourMom));
         assert_eq!(
             clink.find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
@@ -240,7 +251,7 @@ mod find_and_replace {
     }
     #[test]
     fn naive_evil() {
-        let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
+        let clink = Clink::new(test_config(Mode::YourMom));
 
         assert_ne!(
             clink.find_and_replace(
@@ -251,12 +262,12 @@ mod find_and_replace {
     }
     #[test]
     fn should_preserve_query() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink.find_and_replace("https://test.test/?abc=abc",).text,
             "https://test.test/?abc=abc"
         );
-        let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
+        let clink = Clink::new(test_config(Mode::YourMom));
         assert_eq!(
             clink.find_and_replace("https://test.test/?abc=abc",).text,
             "https://test.test/?abc=abc&utm_source=your_mom"
@@ -264,14 +275,14 @@ mod find_and_replace {
     }
     #[test]
     fn multiple_params() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
                 .find_and_replace("https://test.test/?abc=abc&fbclid=flksj",)
                 .text,
             "https://test.test/?abc=abc"
         );
-        let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
+        let clink = Clink::new(test_config(Mode::YourMom));
         assert_eq!(
             clink
                 .find_and_replace("https://test.test/?abc=abc&fbclid=flksj",)
@@ -281,14 +292,14 @@ mod find_and_replace {
     }
     #[test]
     fn multiple_links() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink.find_and_replace(
                 "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
             ).text,
             "https://test.test/?abc=abc\nhttps://test.test/?abc=abc"
         );
-        let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
+        let clink = Clink::new(test_config(Mode::YourMom));
         assert_eq!(
             clink.find_and_replace(
                 "https://test.test/?abc=abc&fbclid=flksj\nhttps://test.test/?abc=abc&fbclid=flksj",
@@ -298,14 +309,14 @@ mod find_and_replace {
     }
     #[test]
     fn multiple_links_and_text() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink.find_and_replace(
                 "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
             ).text,
             "some text here https://test.test/?abc=abc here \nand herehttps://test.test/?abc=abc"
         );
-        let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
+        let clink = Clink::new(test_config(Mode::YourMom));
         assert_eq!(
             clink.find_and_replace(
                 "some text here https://test.test/?abc=abc&fbclid=flksj here \nand herehttps://test.test/?abc=abc&fbclid=flksj",
@@ -315,7 +326,7 @@ mod find_and_replace {
     }
     #[test]
     fn replace() {
-        let clink = Clink::new(ClinkConfig::new(Mode::Replace));
+        let clink = Clink::new(test_config(Mode::Replace));
         assert_eq!(
             clink.find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa",
@@ -333,6 +344,7 @@ mod find_and_replace {
             params: HashSet::from(["foo".into()]),
             exit: vec![],
             verbose: false,
+            remote: None,
         });
         assert_eq!(
             clink
@@ -344,7 +356,7 @@ mod find_and_replace {
 
     #[test]
     fn youtube_sanitize() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
 
         assert_eq!(
             clink
@@ -383,7 +395,7 @@ mod find_and_replace {
             "https://test.test/dQw4w9WgXcQ?si=NblIBgit-qHN7MoH&t=69"
         );
 
-        let clink = Clink::new(ClinkConfig::new(Mode::Replace));
+        let clink = Clink::new(test_config(Mode::Replace));
         assert_eq!(
             clink.find_and_replace(
                 "https://test.test/?fbclid=dsadsa&utm_source=fafa&utm_campaign=fafas&utm_medium=adsa&si=qweasd",
@@ -398,7 +410,7 @@ mod find_and_replace {
             "https://youtu.be/?fbclid=clink&utm_source=clink&utm_campaign=clink&utm_medium=clink&si=clink"
         );
 
-        let clink = Clink::new(ClinkConfig::new(Mode::YourMom));
+        let clink = Clink::new(test_config(Mode::YourMom));
         assert_eq!(
             clink.find_and_replace("https://test.test/?si=dsadsa",).text,
             "https://test.test/?si=dsadsa&utm_source=your_mom"
@@ -412,7 +424,7 @@ mod find_and_replace {
 
     #[test]
     fn preserves_unwise_characters_in_query() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
                 .find_and_replace("https://foo.foo/?param[]=1&param[]=2&fbclid=abc")
@@ -423,7 +435,7 @@ mod find_and_replace {
 
     #[test]
     fn clean_result_counts_urls_cleaned() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         let result = clink.find_and_replace("https://test.test/?fbclid=abc");
         assert_eq!(result.urls_cleaned, 1);
         assert_eq!(result.text, "https://test.test/");
@@ -431,7 +443,7 @@ mod find_and_replace {
 
     #[test]
     fn clean_result_counts_params_removed() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         let result = clink
             .find_and_replace("https://test.test/?fbclid=abc&utm_source=x&utm_medium=y&keep=yes");
         assert_eq!(result.params_removed, 3);
@@ -440,14 +452,14 @@ mod find_and_replace {
 
     #[test]
     fn clean_result_counts_exits_unwrapped() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         let result = clink.find_and_replace("https://exit.sc/?url=https%3A%2F%2Fexample.com");
         assert_eq!(result.exits_unwrapped, 1);
     }
 
     #[test]
     fn instagram_igsh_stripped() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
                 .find_and_replace(
@@ -460,7 +472,7 @@ mod find_and_replace {
 
     #[test]
     fn preserves_equals_in_query_values() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
                 .find_and_replace("https://foo.foo/?token=abc123==&fbclid=abc")
@@ -471,7 +483,7 @@ mod find_and_replace {
 
     #[test]
     fn clean_result_no_changes() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         let result = clink.find_and_replace("https://test.test/?keep=yes");
         assert_eq!(result.urls_cleaned, 0);
         assert_eq!(result.params_removed, 0);
@@ -480,7 +492,7 @@ mod find_and_replace {
 
     #[test]
     fn normalization_only_not_counted_as_cleaned() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         // Url::parse normalizes "https://example.com" to "https://example.com/"
         // This should NOT count as a cleaned URL or modify the text
         let result = clink.find_and_replace("https://example.com");
@@ -491,7 +503,7 @@ mod find_and_replace {
 
     #[test]
     fn clean_result_multiple_urls() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         let result = clink.find_and_replace(
             "https://test.test/?fbclid=a\nhttps://test.test/?utm_source=b&utm_medium=c",
         );
@@ -502,11 +514,22 @@ mod find_and_replace {
 
 #[cfg(test)]
 mod unwrap_exit_params {
-    use crate::{clink::Clink, config::ClinkConfig};
+    use crate::{clink::Clink, config::ClinkConfig, mode::Mode};
+
+    fn test_config(mode: Mode) -> ClinkConfig {
+        let id = std::thread::current().id();
+        let tmp = std::env::temp_dir().join(format!("clink_test_exit_cfg_{id:?}.toml"));
+        let template = include_str!("default_config.toml");
+        std::fs::write(&tmp, template).unwrap();
+        let mut cfg = crate::config::load_config(&tmp).unwrap();
+        cfg.mode = mode;
+        let _ = std::fs::remove_file(&tmp);
+        cfg
+    }
 
     #[test]
     fn has_exit_url() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink.unwrap_exit_params(
                 "https://exit.sc/?url=https%3A%2F%2Fopen.spotify.com%2Fartist%2F3tEV3J5gW5BDMrJqE3NaBy%3Fsi%3D1mLk6MZSRGuol8rgwCe_Cg"
@@ -524,7 +547,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn has_no_exit_url() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink.unwrap_exit_params(
                 "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
@@ -535,7 +558,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn has_exit_url_google_it() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
                 .unwrap_exit_params("https://www.google.it/url?url=https%3A%2F%2Fexample.com&sa=t")
@@ -546,7 +569,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn has_exit_url_google_q_param() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
                 .unwrap_exit_params(
@@ -559,7 +582,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn has_exit_url_bing() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
                 .unwrap_exit_params("https://bing.com/ck/a?u=https%3A%2F%2Fexample.com&foo=bar")
@@ -570,7 +593,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn amazon_com_tracking_stripped() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
                 .find_and_replace(
@@ -583,7 +606,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn youtube_music_si_stripped() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
                 .find_and_replace(
@@ -596,7 +619,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn has_exit_url_but_no_exit_param() {
-        let clink = Clink::new(ClinkConfig::default());
+        let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink.unwrap_exit_params("https://exit.sc/?foo=bar").0,
             "https://exit.sc/?foo=bar"

@@ -1,5 +1,6 @@
-use crate::config::ClinkConfig;
 use std::path::Path;
+
+const DEFAULT_CONFIG_TEMPLATE: &str = include_str!("../default_config.toml");
 
 pub fn execute(config_path: &Path) -> Result<(), String> {
     if config_path.is_file() {
@@ -14,8 +15,8 @@ pub fn execute(config_path: &Path) -> Result<(), String> {
             .map_err(|e| format!("Failed to create config directory: {e}"))?;
     }
 
-    let cfg = ClinkConfig::default();
-    confy::store_path(config_path, &cfg).map_err(|e| format!("Failed to write config: {e}"))?;
+    std::fs::write(config_path, DEFAULT_CONFIG_TEMPLATE)
+        .map_err(|e| format!("Failed to write config: {e}"))?;
 
     println!("Config initialized at {}", config_path.display());
     Ok(())
@@ -37,6 +38,14 @@ mod tests {
         let content = std::fs::read_to_string(&tmp).unwrap();
         assert!(content.contains("mode"));
         assert!(content.contains("sleep_duration"));
+        assert!(
+            content.contains("# Google"),
+            "template should contain comments"
+        );
+        assert!(
+            content.contains("[remote]"),
+            "template should contain commented remote section"
+        );
 
         let _ = std::fs::remove_file(&tmp);
     }
@@ -52,6 +61,22 @@ mod tests {
 
         let content = std::fs::read_to_string(&tmp).unwrap();
         assert_eq!(content, "existing content");
+
+        let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn test_template_is_valid_config() {
+        let tmp = std::env::temp_dir().join("clink_test_init_template_valid.toml");
+        let _ = std::fs::remove_file(&tmp);
+        std::fs::write(&tmp, DEFAULT_CONFIG_TEMPLATE).unwrap();
+
+        let result = crate::config::load_config(&tmp);
+        assert!(
+            result.is_ok(),
+            "template should be a valid config: {:?}",
+            result
+        );
 
         let _ = std::fs::remove_file(&tmp);
     }

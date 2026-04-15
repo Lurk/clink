@@ -47,6 +47,8 @@ pub enum Command {
         #[arg(long)]
         reset: bool,
     },
+    /// Fetch and cache remote patterns
+    Update,
 }
 
 #[cfg(test)]
@@ -139,5 +141,11 @@ mod tests {
                 reset: true
             })
         ));
+    }
+
+    #[test]
+    fn test_parse_update() {
+        let cli = Cli::parse_from(["clink", "update"]);
+        assert!(matches!(cli.command, Some(Command::Update)));
     }
 }
