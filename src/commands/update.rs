@@ -29,8 +29,8 @@ pub fn execute(config_path: &Path) -> Result<(), String> {
         RemoteFormat::Clink => parse_clink_toml(&body)?,
     };
 
-    let param_count = patterns.params.len();
-    let exit_count = patterns.exit.len();
+    let provider_count = patterns.providers.len();
+    let rule_count: usize = patterns.providers.values().map(|p| p.rules.len()).sum();
 
     let cache_path = runtime::data_dir().join("remote_patterns.toml");
     if let Some(parent) = cache_path.parent() {
@@ -43,7 +43,7 @@ pub fn execute(config_path: &Path) -> Result<(), String> {
     std::fs::write(&cache_path, &content).map_err(|e| format!("Failed to write cache: {e}"))?;
 
     println!(
-        "Cached {param_count} params and {exit_count} exit rules to {}",
+        "Cached {provider_count} providers with {rule_count} rules to {}",
         cache_path.display()
     );
 
@@ -53,27 +53,17 @@ pub fn execute(config_path: &Path) -> Result<(), String> {
 fn translate_clearurls(body: &str) -> Result<RemotePatterns, String> {
     let result = crate::clearurls::translate(body)?;
 
-    if result.rules_skipped > 0 {
-        println!(
-            "Note: {}/{} rules were regex patterns and skipped (only literal param names are supported)",
-            result.rules_skipped,
-            result.rules_translated + result.rules_skipped
-        );
-    }
-    if result.redirections_skipped > 0 {
-        println!(
-            "Note: {} redirections skipped (not yet supported)",
-            result.redirections_skipped
-        );
-    }
-
+    println!(
+        "Translated {} providers with {} rules",
+        result.providers.len(),
+        result.rules_translated
+    );
     println!(
         "ClearURLs data provided by the ClearURLs project (LGPLv3) — https://docs.clearurls.xyz"
     );
 
     Ok(RemotePatterns {
-        params: result.params,
-        exit: result.exit,
+        providers: result.providers,
     })
 }
 
@@ -87,10 +77,17 @@ mod tests {
 
     #[test]
     fn test_parse_clink_toml_valid() {
-        let toml = "params = ['fbclid', 'gclid']\nexit = [['exit.sc/', 'url']]";
+        let toml = r#"
+[providers.global]
+rules = ['fbclid', 'gclid']
+
+[providers.exitsc]
+url_pattern = '^https?://exit\.sc'
+redirections = ['^https?://exit\.sc/\?.*?url=([^&]+)']
+"#;
         let result = parse_clink_toml(toml).unwrap();
-        assert_eq!(result.params.len(), 2);
-        assert_eq!(result.exit.len(), 1);
+        assert_eq!(result.providers.len(), 2);
+        assert_eq!(result.providers["global"].rules.len(), 2);
     }
 
     #[test]
@@ -116,8 +113,13 @@ mod tests {
             }
         }"#;
         let result = translate_clearurls(json).unwrap();
-        assert!(result.params.contains("fbclid"));
-        assert!(result.params.contains("gclid"));
+        let test_provider = &result.providers["test"];
+        assert!(test_provider.rules.contains(&"fbclid".to_string()));
+        assert!(test_provider.rules.contains(&"gclid".to_string()));
+        assert_eq!(
+            test_provider.url_pattern.as_deref(),
+            Some("^https?://test\\.com")
+        );
     }
 
     #[test]

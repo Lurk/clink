@@ -1,18 +1,18 @@
-use std::collections::HashSet;
-use std::rc::Rc;
+use std::collections::HashMap;
 
 use serde::Deserialize;
 
+use crate::provider::ProviderConfig;
+
 #[derive(Deserialize)]
 struct ClearUrlsData {
-    providers: std::collections::HashMap<String, Provider>,
+    providers: HashMap<String, ClearUrlsProvider>,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(clippy::struct_field_names)]
-struct Provider {
-    #[allow(dead_code)]
+struct ClearUrlsProvider {
     url_pattern: String,
     complete_provider: bool,
     #[serde(default)]
@@ -20,7 +20,6 @@ struct Provider {
     #[serde(default)]
     referral_marketing: Vec<String>,
     #[serde(default)]
-    #[allow(dead_code)]
     redirections: Vec<String>,
     #[serde(default)]
     #[allow(dead_code)]
@@ -34,58 +33,45 @@ struct Provider {
 }
 
 pub struct TranslationResult {
-    pub params: HashSet<String>,
-    pub exit: Vec<Vec<Rc<str>>>,
+    pub providers: HashMap<String, ProviderConfig>,
     pub rules_translated: usize,
-    pub rules_skipped: usize,
-    pub redirections_skipped: usize,
 }
 
 pub fn translate(json: &str) -> Result<TranslationResult, String> {
     let data: ClearUrlsData =
         serde_json::from_str(json).map_err(|e| format!("Failed to parse ClearURLs JSON: {e}"))?;
 
-    let mut params = HashSet::new();
+    let mut providers = HashMap::new();
     let mut rules_translated = 0usize;
-    let mut rules_skipped = 0usize;
-    let mut redirections_skipped = 0usize;
 
-    for provider in data.providers.values() {
-        if provider.complete_provider {
+    for (name, cu_provider) in &data.providers {
+        if cu_provider.complete_provider {
             continue;
         }
 
-        for rule in provider
+        let mut rules: Vec<String> = Vec::new();
+        for rule in cu_provider
             .rules
             .iter()
-            .chain(provider.referral_marketing.iter())
+            .chain(cu_provider.referral_marketing.iter())
         {
-            if is_literal(rule) {
-                params.insert(rule.clone());
-                rules_translated += 1;
-            } else {
-                rules_skipped += 1;
-            }
+            rules.push(rule.clone());
+            rules_translated += 1;
         }
 
-        redirections_skipped += provider.redirections.len();
+        providers.insert(
+            name.clone(),
+            ProviderConfig {
+                url_pattern: Some(cu_provider.url_pattern.clone()),
+                rules,
+                redirections: cu_provider.redirections.clone(),
+            },
+        );
     }
 
     Ok(TranslationResult {
-        params,
-        exit: Vec::new(),
+        providers,
         rules_translated,
-        rules_skipped,
-        redirections_skipped,
-    })
-}
-
-fn is_literal(rule: &str) -> bool {
-    !rule.chars().any(|c| {
-        matches!(
-            c,
-            '[' | ']' | '(' | ')' | '{' | '}' | '*' | '+' | '?' | '\\' | '|' | '^' | '$'
-        )
     })
 }
 
@@ -93,48 +79,87 @@ fn is_literal(rule: &str) -> bool {
 mod tests {
     use super::*;
 
-    fn make_provider_json(rules: &[&str], referral: &[&str]) -> String {
+    fn make_provider_json(
+        name: &str,
+        url_pattern: &str,
+        rules: &[&str],
+        referral: &[&str],
+        redirections: &[&str],
+    ) -> String {
         let rules_json: Vec<String> = rules.iter().map(|r| format!("\"{r}\"")).collect();
         let referral_json: Vec<String> = referral.iter().map(|r| format!("\"{r}\"")).collect();
+        let redir_json: Vec<String> = redirections.iter().map(|r| format!("\"{r}\"")).collect();
         format!(
             r#"{{
                 "providers": {{
-                    "test": {{
-                        "urlPattern": "^https?://example\\.com",
+                    "{name}": {{
+                        "urlPattern": "{url_pattern}",
                         "completeProvider": false,
-                        "rules": [{}],
-                        "referralMarketing": [{}],
+                        "rules": [{rules}],
+                        "referralMarketing": [{referral}],
                         "rawRules": [],
                         "exceptions": [],
-                        "redirections": [],
+                        "redirections": [{redirections}],
                         "forceRedirection": false
                     }}
                 }}
             }}"#,
-            rules_json.join(","),
-            referral_json.join(",")
+            rules = rules_json.join(","),
+            referral = referral_json.join(","),
+            redirections = redir_json.join(",")
         )
     }
 
     #[test]
-    fn translates_literal_rules_to_params() {
-        let json = make_provider_json(&["utm_source", "fbclid"], &["ref"]);
+    fn translates_rules_to_provider() {
+        let json = make_provider_json(
+            "test",
+            "^https?://example\\\\.com",
+            &["utm_source", "fbclid"],
+            &["ref"],
+            &[],
+        );
         let result = translate(&json).unwrap();
-        assert!(result.params.contains("utm_source"));
-        assert!(result.params.contains("fbclid"));
-        assert!(result.params.contains("ref"));
+        assert!(result.providers.contains_key("test"));
+        let provider = &result.providers["test"];
+        assert!(provider.rules.contains(&"utm_source".into()));
+        assert!(provider.rules.contains(&"fbclid".into()));
+        assert!(provider.rules.contains(&"ref".into()));
+        assert_eq!(
+            provider.url_pattern.as_deref(),
+            Some("^https?://example\\.com")
+        );
         assert_eq!(result.rules_translated, 3);
-        assert_eq!(result.rules_skipped, 0);
     }
 
     #[test]
-    fn skips_regex_rules() {
-        let json = make_provider_json(&["utm_source", "gfe_[a-z]*", "bi[a-z]*"], &[]);
+    fn includes_regex_rules() {
+        let json = make_provider_json(
+            "test",
+            "^https?://example\\\\.com",
+            &["utm_source", "gfe_[a-z]*"],
+            &[],
+            &[],
+        );
         let result = translate(&json).unwrap();
-        assert!(result.params.contains("utm_source"));
-        assert!(!result.params.contains("gfe_[a-z]*"));
-        assert_eq!(result.rules_translated, 1);
-        assert_eq!(result.rules_skipped, 2);
+        let provider = &result.providers["test"];
+        assert!(provider.rules.contains(&"utm_source".into()));
+        assert!(provider.rules.contains(&"gfe_[a-z]*".into()));
+        assert_eq!(result.rules_translated, 2);
+    }
+
+    #[test]
+    fn translates_redirections() {
+        let json = make_provider_json(
+            "google",
+            "^https?://google\\\\.com",
+            &[],
+            &[],
+            &["^https?://google\\\\.com/url\\\\?.*?q=([^&]+)"],
+        );
+        let result = translate(&json).unwrap();
+        let provider = &result.providers["google"];
+        assert_eq!(provider.redirections.len(), 1);
     }
 
     #[test]
@@ -154,7 +179,7 @@ mod tests {
             }
         }"#;
         let result = translate(json).unwrap();
-        assert!(result.params.is_empty());
+        assert!(result.providers.is_empty());
     }
 
     #[test]
@@ -164,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn merges_params_from_multiple_providers() {
+    fn multiple_providers_stay_separate() {
         let json = r#"{
             "providers": {
                 "google": {
@@ -190,10 +215,16 @@ mod tests {
             }
         }"#;
         let result = translate(json).unwrap();
-        assert!(result.params.contains("gclid"));
-        assert!(result.params.contains("ved"));
-        assert!(result.params.contains("fbclid"));
-        assert!(result.params.contains("ref"));
+        assert_eq!(result.providers.len(), 2);
+        assert!(result.providers.contains_key("google"));
+        assert!(result.providers.contains_key("facebook"));
+        assert!(result.providers["google"].rules.contains(&"gclid".into()));
+        assert!(
+            result.providers["facebook"]
+                .rules
+                .contains(&"fbclid".into())
+        );
+        assert!(result.providers["facebook"].rules.contains(&"ref".into()));
         assert_eq!(result.rules_translated, 4);
     }
 }

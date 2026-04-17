@@ -1,12 +1,10 @@
 use crate::config::ClinkConfig;
-use crate::expand_string::expand_string;
 use crate::mode::Mode;
+use crate::provider::{CompiledProvider, CompiledRules};
 use chrono::prelude::*;
 use linkify::{LinkFinder, LinkKind};
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use rand::RngExt;
-use std::collections::HashMap;
-use std::rc::Rc;
 use url::Url;
 
 const QUERY_COMPONENT_KEY: &AsciiSet = &CONTROLS.add(b' ').add(b'#').add(b'&').add(b'=').add(b'+');
@@ -21,23 +19,36 @@ pub struct CleanResult {
 
 pub struct Clink {
     config: ClinkConfig,
-    exit_map: HashMap<Rc<str>, Rc<[Rc<str>]>>,
+    global_rules: CompiledRules,
+    scoped_providers: Vec<CompiledProvider>,
     finder: LinkFinder,
 }
 
 impl Clink {
     pub fn new(config: ClinkConfig) -> Self {
-        let exit_map = build_exit_map(&config.exit);
+        let global_rules = config
+            .providers
+            .get("global")
+            .map_or_else(|| CompiledRules::new(&[]), |p| CompiledRules::new(&p.rules));
+
+        let scoped_providers: Vec<CompiledProvider> = config
+            .providers
+            .iter()
+            .filter(|(name, _)| name.as_str() != "global")
+            .filter_map(|(_, cfg)| CompiledProvider::new(cfg))
+            .collect();
+
         let mut finder = LinkFinder::new();
         finder.kinds(&[LinkKind::Url]);
 
         if config.verbose {
-            println!("Exit map: {exit_map:#?}");
+            println!("Compiled {} scoped providers", scoped_providers.len());
         }
 
         Clink {
             config,
-            exit_map,
+            global_rules,
+            scoped_providers,
             finder,
         }
     }
@@ -49,7 +60,7 @@ impl Clink {
         let mut exits_unwrapped: u32 = 0;
 
         for link in self.finder.links(input) {
-            let (unwrapped, was_exit) = self.unwrap_exit_params(link.as_str());
+            let (unwrapped, was_exit) = self.try_unwrap_redirect(link.as_str());
             if was_exit {
                 exits_unwrapped += 1;
             }
@@ -57,9 +68,12 @@ impl Clink {
             let normalized_original = l.to_string();
             #[allow(clippy::cast_possible_truncation)]
             let original_param_count = l.query_pairs().count() as u32;
+
+            let matching_provider = self.find_matching_provider(unwrapped.as_str());
+
             let query = self.process_query(
                 l.query_pairs().map(|(k, v)| (k.to_string(), v.to_string())),
-                l.domain().map(|d| d.strip_prefix("www.").unwrap_or(d)),
+                matching_provider,
             );
             #[allow(clippy::cast_possible_truncation)]
             let new_param_count = query.len() as u32;
@@ -96,20 +110,24 @@ impl Clink {
         }
     }
 
+    fn find_matching_provider(&self, url: &str) -> Option<&CompiledProvider> {
+        self.scoped_providers.iter().find(|p| p.matches_url(url))
+    }
+
     fn process_query(
         &self,
         query: impl Iterator<Item = (String, String)>,
-        domain: Option<&str>,
+        provider: Option<&CompiledProvider>,
     ) -> Vec<(String, String)> {
         match self.config.mode {
-            Mode::Remove => self.filter(query, domain),
-            Mode::Replace => self.replace(query, domain),
+            Mode::Remove => self.filter(query, provider),
+            Mode::Replace => self.replace(query, provider),
             Mode::YourMom => {
                 let date = Utc::now();
                 if date.month() == 5 && date.day() == 9 {
-                    self.filter(query, domain)
+                    self.filter(query, provider)
                 } else {
-                    let mut tmp = self.filter(query, domain);
+                    let mut tmp = self.filter(query, provider);
                     tmp.push(("utm_source".to_string(), "your_mom".to_string()));
                     tmp
                 }
@@ -118,7 +136,7 @@ impl Clink {
                 let mut rng = rand::rng();
                 query
                     .map(|(key, value)| {
-                        if self.config.params.contains(&key) {
+                        if self.is_tracked(&key, provider) {
                             (
                                 key,
                                 swap_two_chars(
@@ -136,29 +154,28 @@ impl Clink {
         }
     }
 
-    fn is_tracked_param(&self, key: &str, domain: Option<&str>) -> bool {
-        self.config.params.contains(key)
-            || domain.is_some_and(|d| self.config.params.contains(&format!("{d}``{key}")))
+    fn is_tracked(&self, key: &str, provider: Option<&CompiledProvider>) -> bool {
+        self.global_rules.is_tracked(key) || provider.is_some_and(|p| p.rules.is_tracked(key))
     }
 
     fn filter(
         &self,
         query: impl Iterator<Item = (String, String)>,
-        domain: Option<&str>,
+        provider: Option<&CompiledProvider>,
     ) -> Vec<(String, String)> {
         query
-            .filter(|(key, _)| !self.is_tracked_param(key, domain))
+            .filter(|(key, _)| !self.is_tracked(key, provider))
             .collect()
     }
 
     fn replace(
         &self,
         query: impl Iterator<Item = (String, String)>,
-        domain: Option<&str>,
+        provider: Option<&CompiledProvider>,
     ) -> Vec<(String, String)> {
         query
             .map(|(key, value)| {
-                if self.is_tracked_param(&key, domain) {
+                if self.is_tracked(&key, provider) {
                     (key, self.config.replace_to.clone())
                 } else {
                     (key, value)
@@ -167,21 +184,12 @@ impl Clink {
             .collect()
     }
 
-    fn unwrap_exit_params(&self, url: &str) -> (String, bool) {
-        let Ok(l) = Url::parse(url) else {
-            return (url.to_string(), false);
-        };
-        let domain = l.domain().unwrap_or("");
-        let path = join_url(domain, l.path());
-        if let Some(params) = self.exit_map.get(&path) {
-            let exit = l
-                .query_pairs()
-                .filter(|p| params.contains(&p.0.clone().into()) && !p.1.is_empty())
-                .map(|p| p.1.to_string())
-                .take(1)
-                .collect::<String>();
-            if !exit.is_empty() {
-                return (exit, true);
+    fn try_unwrap_redirect(&self, url: &str) -> (String, bool) {
+        for provider in &self.scoped_providers {
+            if provider.matches_url(url) {
+                if let Some(dest) = provider.try_redirect(url) {
+                    return (dest, true);
+                }
             }
         }
         (url.to_string(), false)
@@ -194,25 +202,10 @@ fn swap_two_chars(s: &str, a: usize, b: usize) -> String {
     char_vector.iter().collect()
 }
 
-fn join_url(domain: &str, path: &str) -> Rc<str> {
-    format!("{domain}{path}").into()
-}
-
-fn build_exit_map(input: &[Vec<Rc<str>>]) -> HashMap<Rc<str>, Rc<[Rc<str>]>> {
-    let mut map: HashMap<Rc<str>, Rc<[Rc<str>]>> = HashMap::new();
-    for row in input {
-        let expanded = expand_string(&row[0]);
-        for url in expanded {
-            map.insert(url.into(), row[1..].to_vec().into());
-        }
-    }
-    map
-}
-
 #[cfg(test)]
 mod find_and_replace {
 
-    use std::collections::HashSet;
+    use std::collections::HashMap;
 
     use super::*;
 
@@ -337,12 +330,19 @@ mod find_and_replace {
 
     #[test]
     fn custom_params() {
+        let mut providers = HashMap::new();
+        providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["foo".into()],
+                ..Default::default()
+            },
+        );
         let clink = Clink::new(ClinkConfig {
             mode: Mode::Replace,
             replace_to: "clink".to_string(),
             sleep_duration: 150,
-            params: HashSet::from(["foo".into()]),
-            exit: vec![],
+            providers,
             verbose: false,
             remote: None,
         });
@@ -493,8 +493,6 @@ mod find_and_replace {
     #[test]
     fn normalization_only_not_counted_as_cleaned() {
         let clink = Clink::new(test_config(Mode::Remove));
-        // Url::parse normalizes "https://example.com" to "https://example.com/"
-        // This should NOT count as a cleaned URL or modify the text
         let result = clink.find_and_replace("https://example.com");
         assert_eq!(result.urls_cleaned, 0);
         assert_eq!(result.params_removed, 0);
@@ -531,14 +529,14 @@ mod unwrap_exit_params {
     fn has_exit_url() {
         let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
-            clink.unwrap_exit_params(
+            clink.try_unwrap_redirect(
                 "https://exit.sc/?url=https%3A%2F%2Fopen.spotify.com%2Fartist%2F3tEV3J5gW5BDMrJqE3NaBy%3Fsi%3D1mLk6MZSRGuol8rgwCe_Cg"
             ).0,
             "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
         );
 
         assert_eq!(
-        clink.unwrap_exit_params(
+        clink.try_unwrap_redirect(
             "https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjMuu2zrreBAxUt2gIHHaDVC_gQyCl6BAgqEAM&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ&usg=AOvVaw0aHtehaphMhOCAkCydRLZU&opi=89978449"
         ).0,
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
@@ -549,7 +547,7 @@ mod unwrap_exit_params {
     fn has_no_exit_url() {
         let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
-            clink.unwrap_exit_params(
+            clink.try_unwrap_redirect(
                 "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
             ).0,
             "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
@@ -561,7 +559,7 @@ mod unwrap_exit_params {
         let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
-                .unwrap_exit_params("https://www.google.it/url?url=https%3A%2F%2Fexample.com&sa=t")
+                .try_unwrap_redirect("https://www.google.it/url?url=https%3A%2F%2Fexample.com&sa=t")
                 .0,
             "https://example.com"
         );
@@ -572,7 +570,7 @@ mod unwrap_exit_params {
         let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
-                .unwrap_exit_params(
+                .try_unwrap_redirect(
                     "https://www.google.com/url?q=https%3A%2F%2Fexample.com&sa=t&usg=abc123"
                 )
                 .0,
@@ -585,7 +583,7 @@ mod unwrap_exit_params {
         let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
             clink
-                .unwrap_exit_params("https://bing.com/ck/a?u=https%3A%2F%2Fexample.com&foo=bar")
+                .try_unwrap_redirect("https://bing.com/ck/a?u=https%3A%2F%2Fexample.com&foo=bar")
                 .0,
             "https://example.com"
         );
@@ -621,7 +619,7 @@ mod unwrap_exit_params {
     fn has_exit_url_but_no_exit_param() {
         let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
-            clink.unwrap_exit_params("https://exit.sc/?foo=bar").0,
+            clink.try_unwrap_redirect("https://exit.sc/?foo=bar").0,
             "https://exit.sc/?foo=bar"
         );
     }

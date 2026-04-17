@@ -12,11 +12,15 @@ pub fn execute(config_path: &Path) -> Result<(), String> {
     let cfg = load_config(config_path)?;
     let warnings = cfg.validate();
 
+    let rule_count: usize = cfg.providers.values().map(|p| p.rules.len()).sum();
+    let redirect_count: usize = cfg.providers.values().map(|p| p.redirections.len()).sum();
+
     println!("Config at {}:", config_path.display());
     println!("  Mode: {}", cfg.mode);
     println!("  Sleep duration: {}ms", cfg.sleep_duration);
-    println!("  Tracked params: {}", cfg.params.len());
-    println!("  Exit patterns: {}", cfg.exit.len());
+    println!("  Providers: {}", cfg.providers.len());
+    println!("  Total rules: {rule_count}");
+    println!("  Total redirections: {redirect_count}");
 
     if warnings.is_empty() {
         println!("\nConfig is valid.");

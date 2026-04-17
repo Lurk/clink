@@ -39,8 +39,8 @@ mod tests {
         assert!(content.contains("mode"));
         assert!(content.contains("sleep_duration"));
         assert!(
-            content.contains("# Google"),
-            "template should contain comments"
+            content.contains("[providers.global]"),
+            "template should contain global provider"
         );
         assert!(
             content.contains("[remote]"),

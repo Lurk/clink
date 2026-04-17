@@ -4,7 +4,9 @@ mod clink;
 mod commands;
 mod config;
 mod expand_string;
+mod migration;
 mod mode;
+mod provider;
 mod runtime;
 mod service;
 #[cfg(unix)]

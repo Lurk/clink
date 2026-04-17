@@ -78,105 +78,136 @@ Default path:
 
 On the first run, clink will create the default config in the path.
 
+If you have an old config with flat `params` and `exit` arrays, clink will auto-migrate it to the provider-based format on first run. A backup of the old config is saved as `config.toml.backup`.
+
 Default config:
 
 ```toml
-# You can find detailed description of modes below
-# one of: remove, replace, your_mom, evil
+# Clink configuration
+# https://github.com/Lurk/clink
+
+# Processing mode for tracking parameters:
+#   remove   — strip tracking params from URLs
+#   replace  — replace param values with `replace_to` text
+#   your_mom — remove params + add utm_source=your_mom (except Mother's Day)
+#   evil     — randomly swap characters in tracking param values
 mode = 'remove'
-# Text for replace mode
+
+# Replacement text used in 'replace' mode
 replace_to = 'clink'
-# How often Clink will check clipboard in milliseconds
+
+# How often clink checks the clipboard, in milliseconds
 sleep_duration = 150
-# Which GET params Clink should update
-params = [
+
+# Providers define URL-scoped rules for param stripping and redirect unwrapping.
+# Each provider has:
+#   url_pattern  — regex matching URLs this provider applies to (omit for global)
+#   rules        — param names to strip (literal strings or regexes)
+#   redirections — regexes with one capture group extracting the destination URL
+
+[providers.global]
+rules = [
     # Google
-    'dclid', # DoubleClick click identifier
-    'gclid', # Google Ads click identifier
-    'gclsrc', # Google Ads source
-    '_ga', # Google Analytics cross-domain
-    '_gl', # Google Analytics linker
+    'dclid',
+    'gclid',
+    'gclsrc',
+    '_ga',
+    '_gl',
     # Meta (Facebook/Instagram)
-    'fbclid', # Facebook click identifier
-    'igshid', # Instagram share identifier
+    'fbclid',
+    'igshid',
+    'igsh',
     # Microsoft/Bing
-    'msclkid', # Microsoft Ads click identifier
+    'msclkid',
     # Twitter/X
-    'twclid', # Twitter click identifier
+    'twclid',
     # TikTok
-    'ttclid', # TikTok click identifier
+    'ttclid',
     # LinkedIn
-    'li_fat_id', # LinkedIn first-party ad tracking
+    'li_fat_id',
     # Yandex
-    'yclid', # Yandex click identifier
+    'yclid',
     # UTM family
     'utm_id',
     'utm_source',
     'utm_source_platform',
     'utm_creative_format',
-    'utm_campaign',
     'utm_medium',
     'utm_term',
+    'utm_campaign',
     'utm_content',
     # Awin (formerly Zanox)
     'zanpid',
-    # Email/marketing platforms
-    'mc_cid', # Mailchimp campaign ID
-    'mc_eid', # Mailchimp email ID
-    '_hsenc', # HubSpot tracking
-    '_hsmi', # HubSpot tracking
-    'mkt_tok', # Marketo token
-    '__s', # Drip email tracking
-    '_openstat', # Openstat
-    'vero_id', # Vero tracking
-    'spm', # Alibaba/AliExpress tracking
-    # Domain-specific params using "{domain}``{param}" pattern
-    "youtube.com``si",
-    "youtu.be``si",
-    "music.youtube.com``si",
-    # Amazon tracking params — pattern expands to 210 domain/param combinations
-    "amazon.(com|de|co.uk|co.jp|fr|it|es|ca|com.au|com.br|com.mx|nl|pl|se|sg|in|com.be|com.tr|eg|sa|ae)``(sp_csd|pd_rd_w|pd_rd_wg|pd_rd_i|pd_rd_r|pf_rd_r|pf_rd_p|t|psc|content-id)",
+    # Mailchimp
+    'mc_cid',
+    'mc_eid',
+    # HubSpot
+    '_hsenc',
+    '_hsmi',
+    # Marketo
+    'mkt_tok',
+    # Drip
+    '__s',
+    # Openstat
+    '_openstat',
+    # Vero
+    'vero_id',
+    # Alibaba/AliExpress
+    'spm',
 ]
-# Which exit params in URL should be unwrapped
-exit = [
-    [
-        "vk.com/away.php",
-        "to",
-    ],
-    [
-        "exit.sc/",
-        "url",
-    ],
-    [
-        "facebook.com/(l|confirmemail|login).php",
-        "u",
-        "next",
-    ],
-    [
-        "(www.|)(encrypted.|)google.(at|be|ca|ch|co.(bw|il|in|jp|nz|uk|za)|com(|.(ar|au|br|eg|mx|sg|tr|tw))|cl|de|dk|es|fr|it|nl|pl|pt|ru|se)/url",
-        "url",
-    ],
-    [
-        "bing.com/ck/a",
-        "u",
-    ],
-    [
-        "l.instagram.com/",
-        "u",
-    ],
-    [
-        "youtube.com/redirect",
-        "q",
-    ],
-    [
-        "linkedin.com/authwall",
-        "sessionRedirect",
-    ],
-    [
-        "mora.jp/cart",
-        "returnUrl",
-    ],
-]
+
+[providers.youtube]
+url_pattern = '^https?://([a-z0-9-]+\.)*?(youtube\.com|youtu\.be)'
+rules = ['si']
+
+[providers.amazon]
+url_pattern = '^https?://([a-z0-9-]+\.)*?amazon\.(com|de|co\.uk|co\.jp|fr|it|es|ca|com\.au|com\.br|com\.mx|nl|pl|se|sg|in|com\.be|com\.tr|eg|sa|ae)'
+rules = ['sp_csd', 'pd_rd_w', 'pd_rd_wg', 'pd_rd_i', 'pd_rd_r', 'pf_rd_r', 'pf_rd_p', 't', 'psc', 'content-id']
+
+[providers.google]
+url_pattern = '^https?://([a-z0-9-]+\.)*?google\.[a-z]{2,}'
+redirections = ['^https?://[a-z0-9.-]*google\.[a-z.]+/url\?.*?(?:url|q)=([^&]+)']
+
+[providers.facebook]
+url_pattern = '^https?://([a-z0-9-]+\.)*?facebook\.com'
+redirections = ['^https?://[a-z0-9.-]*facebook\.com/(?:l|confirmemail|login)\.php\?.*?(?:u|next)=([^&]+)']
+
+[providers.instagram]
+url_pattern = '^https?://l\.instagram\.com'
+redirections = ['^https?://l\.instagram\.com/\?.*?u=([^&]+)']
+
+[providers.vk]
+url_pattern = '^https?://vk\.com'
+redirections = ['^https?://vk\.com/away\.php\?.*?to=([^&]+)']
+
+[providers.exitsc]
+url_pattern = '^https?://exit\.sc'
+redirections = ['^https?://exit\.sc/\?.*?url=([^&]+)']
+
+[providers.bing]
+url_pattern = '^https?://([a-z0-9-]+\.)*?bing\.com'
+redirections = ['^https?://bing\.com/ck/a\?.*?u=([^&]+)']
+
+[providers.youtube_redirect]
+url_pattern = '^https?://([a-z0-9-]+\.)*?youtube\.com/redirect'
+redirections = ['^https?://[a-z0-9.-]*youtube\.com/redirect\?.*?q=([^&]+)']
+
+[providers.linkedin]
+url_pattern = '^https?://([a-z0-9-]+\.)*?linkedin\.com'
+redirections = ['^https?://[a-z0-9.-]*linkedin\.com/authwall\?.*?sessionRedirect=([^&]+)']
+
+[providers.mora]
+url_pattern = '^https?://mora\.jp'
+redirections = ['^https?://mora\.jp/cart\?.*?returnUrl=([^&]+)']
+
+# Optional: fetch providers from a remote URL.
+# Supported formats:
+#   clearurls — ClearURLs data.min.json (https://docs.clearurls.xyz/1.26.1/specs/rules/)
+#   clink     — native clink TOML format
+#
+# [remote]
+# url = 'https://rules2.clearurls.xyz/data.min.json'
+# format = 'clearurls'
 ```
 
 ### mode
@@ -197,55 +228,50 @@ This is the value that will be used in replace mode
 Sleep duration between clipboard data pulls in milliseconds. 
 
 
-### params
+### providers
 
-Array of GET query params to apply chosen mode. Params support the same group expansion syntax as exit entries — e.g., `(foo|bar)` expands to both `foo` and `bar`. Patterns are expanded at config load time.
+The config is organized around providers. Each provider groups rules and redirections that apply to a specific domain (or globally). A provider can have:
 
-### exit
+* `url_pattern` — a regex that the URL must match for this provider to apply. Omit it (as in `providers.global`) to match all URLs.
+* `rules` — an array of param names to strip from matching URLs.
+* `redirections` — an array of regexes used to unwrap redirect/exit URLs (see below).
 
-Array of exit links to unwrap. Every element is also an array where first element is a URL in a simplified regular
-expression and all others are query params that can contain exit URL.
+The `providers.global` provider has no `url_pattern`, so its rules apply to every URL. Domain-specific providers like `providers.youtube` or `providers.amazon` only fire when the URL matches their `url_pattern`.
+
+### redirections
+
+Redirections unwrap exit/redirect URLs. Each entry is a regex with one capture group that extracts the destination URL.
 
 For example this URL: `https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjMuu2zrreBAxUt2gIHHaDVC_gQyCl6BAgqEAM&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ&usg=AOvVaw0aHtehaphMhOCAkCydRLZU&opi=89978449`, 
 
 Will be unwrapped to `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
 
-How does it work? 
+How does it work? The Google provider's redirection regex matches the URL and captures the `url` (or `q`) query param value:
 
-This exit entry: 
 ```toml
-    [
-        "(www.|)a.com/",
-        "u",
-        "next",
-    ],
+[providers.google]
+url_pattern = '^https?://([a-z0-9-]+\.)*?google\.[a-z]{2,}'
+redirections = ['^https?://[a-z0-9.-]*google\.[a-z.]+/url\?.*?(?:url|q)=([^&]+)']
 ```
 
-will unwrap:
-
-* `https://a.com/?u=...`
-* `https://www.a.com/?u=...`
-* `https://a.com/?next=...`
-* `https://www.a.com/?next=...`
-
-Keep in mind that you do not need to have `https` and/or `http` in exit link definition. 
+The `url_pattern` ensures this redirection only fires on Google domains. The regex in `redirections` captures everything after `url=` or `q=` (up to the next `&`) as the destination URL.
 
 This feature is heavily inspired by [musicbrainz-bot](https://github.com/Freso/musicbrainz-bot/blob/82e37124cdea83f639d133136809fcb898a3ff2b/exit_url_cleanup.py#L19-L38)
 
 ### remote (optional)
 
-Fetch tracking patterns from a remote URL. Remote patterns serve as a base;
-your local `params` and `exit` entries are merged on top.
+Fetch providers from a remote URL. Remote providers serve as a base;
+your local providers are merged on top.
 
 ```toml
 [remote]
-url = 'https://raw.githubusercontent.com/AMinber/ClearUrls/master/data/data.min.json'
+url = 'https://rules2.clearurls.xyz/data.min.json'
 format = 'clearurls'
 ```
 
 Supported formats:
-- `clearurls` — [ClearURLs](https://docs.clearurls.xyz) `data.min.json` (LGPLv3, maintained by Kevin R. / AMinber)
-- `clink` — clink-native TOML with `params` and `exit` fields
+- `clearurls` — [ClearURLs](https://docs.clearurls.xyz) `data.min.json` (LGPLv3, maintained by Kevin R. / AMinber). ClearURLs rules map 1:1 to providers — domain scoping, regex rules, and redirections all come through.
+- `clink` — clink-native TOML with providers
 
 After adding the `[remote]` section, run:
 

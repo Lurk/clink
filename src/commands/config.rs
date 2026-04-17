@@ -80,6 +80,22 @@ fn build_diff(config_path: &Path) -> Result<String, String> {
     Ok(out)
 }
 
+fn collect_all_rules(config: &ClinkConfig) -> HashSet<String> {
+    config
+        .providers
+        .iter()
+        .flat_map(|(name, p)| p.rules.iter().map(move |r| format!("{name}:{r}")))
+        .collect()
+}
+
+fn collect_all_redirections(config: &ClinkConfig) -> HashSet<String> {
+    config
+        .providers
+        .iter()
+        .flat_map(|(name, p)| p.redirections.iter().map(move |r| format!("{name}:{r}")))
+        .collect()
+}
+
 fn diff_configs(loaded: &ClinkConfig, current: &ClinkConfig, out: &mut String) -> bool {
     let mut has_diff = false;
 
@@ -106,54 +122,53 @@ fn diff_configs(loaded: &ClinkConfig, current: &ClinkConfig, out: &mut String) -
         .unwrap();
     }
 
-    let added_params: Vec<&String> = current.params.difference(&loaded.params).collect();
-    let removed_params: Vec<&String> = loaded.params.difference(&current.params).collect();
+    let loaded_rules = collect_all_rules(loaded);
+    let current_rules = collect_all_rules(current);
 
-    if !added_params.is_empty() {
+    let added_rules: Vec<&String> = current_rules.difference(&loaded_rules).collect();
+    let removed_rules: Vec<&String> = loaded_rules.difference(&current_rules).collect();
+
+    if !added_rules.is_empty() {
         has_diff = true;
-        writeln!(out, "\nParams added ({}):", added_params.len()).unwrap();
-        let mut sorted = added_params;
+        writeln!(out, "\nRules added ({}):", added_rules.len()).unwrap();
+        let mut sorted = added_rules;
         sorted.sort();
-        for p in &sorted {
-            writeln!(out, "  + {p}").unwrap();
+        for r in &sorted {
+            writeln!(out, "  + {r}").unwrap();
         }
     }
-    if !removed_params.is_empty() {
+    if !removed_rules.is_empty() {
         has_diff = true;
-        writeln!(out, "\nParams removed ({}):", removed_params.len()).unwrap();
-        let mut sorted = removed_params;
+        writeln!(out, "\nRules removed ({}):", removed_rules.len()).unwrap();
+        let mut sorted = removed_rules;
         sorted.sort();
-        for p in &sorted {
-            writeln!(out, "  - {p}").unwrap();
+        for r in &sorted {
+            writeln!(out, "  - {r}").unwrap();
         }
     }
 
-    let loaded_exit_strs: HashSet<String> = loaded
-        .exit
-        .iter()
-        .map(|v| v.iter().map(AsRef::as_ref).collect::<Vec<_>>().join(" -> "))
+    let loaded_redirections = collect_all_redirections(loaded);
+    let current_redirections = collect_all_redirections(current);
+
+    let added_redirections: Vec<&String> = current_redirections
+        .difference(&loaded_redirections)
         .collect();
-    let current_exit_strs: HashSet<String> = current
-        .exit
-        .iter()
-        .map(|v| v.iter().map(AsRef::as_ref).collect::<Vec<_>>().join(" -> "))
+    let removed_redirections: Vec<&String> = loaded_redirections
+        .difference(&current_redirections)
         .collect();
 
-    let added_exits: Vec<&String> = current_exit_strs.difference(&loaded_exit_strs).collect();
-    let removed_exits: Vec<&String> = loaded_exit_strs.difference(&current_exit_strs).collect();
-
-    if !added_exits.is_empty() {
+    if !added_redirections.is_empty() {
         has_diff = true;
-        writeln!(out, "\nExit rules added:").unwrap();
-        for e in &added_exits {
-            writeln!(out, "  + {e}").unwrap();
+        writeln!(out, "\nRedirections added:").unwrap();
+        for r in &added_redirections {
+            writeln!(out, "  + {r}").unwrap();
         }
     }
-    if !removed_exits.is_empty() {
+    if !removed_redirections.is_empty() {
         has_diff = true;
-        writeln!(out, "\nExit rules removed:").unwrap();
-        for e in &removed_exits {
-            writeln!(out, "  - {e}").unwrap();
+        writeln!(out, "\nRedirections removed:").unwrap();
+        for r in &removed_redirections {
+            writeln!(out, "  - {r}").unwrap();
         }
     }
 
@@ -189,7 +204,7 @@ fn do_reset(config_path: &Path) -> Result<(), String> {
 mod tests {
     use super::*;
     use crate::config::ClinkConfig;
-    use std::collections::HashSet;
+    use std::collections::HashMap;
 
     #[test]
     fn test_execute_prints_path() {
@@ -218,15 +233,33 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_params_detects_added() {
+    fn test_diff_rules_detects_added() {
+        let mut loaded_providers = HashMap::new();
+        loaded_providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["fbclid".into()],
+                ..Default::default()
+            },
+        );
         let loaded = ClinkConfig {
-            params: HashSet::from(["fbclid".into()]),
+            providers: loaded_providers,
             ..ClinkConfig::default()
         };
+
+        let mut current_providers = HashMap::new();
+        current_providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["fbclid".into(), "gclid".into()],
+                ..Default::default()
+            },
+        );
         let current = ClinkConfig {
-            params: HashSet::from(["fbclid".into(), "gclid".into()]),
+            providers: current_providers,
             ..ClinkConfig::default()
         };
+
         let mut out = String::new();
         let changed = diff_configs(&loaded, &current, &mut out);
         assert!(changed);
@@ -234,15 +267,33 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_params_detects_removed() {
+    fn test_diff_rules_detects_removed() {
+        let mut loaded_providers = HashMap::new();
+        loaded_providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["fbclid".into(), "gclid".into()],
+                ..Default::default()
+            },
+        );
         let loaded = ClinkConfig {
-            params: HashSet::from(["fbclid".into(), "gclid".into()]),
+            providers: loaded_providers,
             ..ClinkConfig::default()
         };
+
+        let mut current_providers = HashMap::new();
+        current_providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["fbclid".into()],
+                ..Default::default()
+            },
+        );
         let current = ClinkConfig {
-            params: HashSet::from(["fbclid".into()]),
+            providers: current_providers,
             ..ClinkConfig::default()
         };
+
         let mut out = String::new();
         let changed = diff_configs(&loaded, &current, &mut out);
         assert!(changed);
@@ -251,12 +302,20 @@ mod tests {
 
     #[test]
     fn test_diff_no_changes() {
+        let mut providers = HashMap::new();
+        providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["fbclid".into()],
+                ..Default::default()
+            },
+        );
         let loaded = ClinkConfig {
-            params: HashSet::from(["fbclid".into()]),
+            providers: providers.clone(),
             ..ClinkConfig::default()
         };
         let current = ClinkConfig {
-            params: HashSet::from(["fbclid".into()]),
+            providers,
             ..ClinkConfig::default()
         };
         let mut out = String::new();
