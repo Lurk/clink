@@ -7,6 +7,7 @@ mod expand_string;
 mod migration;
 mod mode;
 mod provider;
+mod remote;
 mod runtime;
 mod service;
 #[cfg(unix)]

@@ -203,22 +203,23 @@ fn swap_two_chars(s: &str, a: usize, b: usize) -> String {
 }
 
 #[cfg(test)]
+fn test_config(mode: Mode) -> ClinkConfig {
+    let id = std::thread::current().id();
+    let tmp = std::env::temp_dir().join(format!("clink_test_cfg_{id:?}.toml"));
+    let template = include_str!("default_config.toml");
+    std::fs::write(&tmp, template).unwrap();
+    let mut cfg = crate::config::load_config(&tmp).unwrap();
+    cfg.mode = mode;
+    let _ = std::fs::remove_file(&tmp);
+    cfg
+}
+
+#[cfg(test)]
 mod find_and_replace {
 
     use std::collections::HashMap;
 
     use super::*;
-
-    fn test_config(mode: Mode) -> ClinkConfig {
-        let id = std::thread::current().id();
-        let tmp = std::env::temp_dir().join(format!("clink_test_cfg_{id:?}.toml"));
-        let template = include_str!("default_config.toml");
-        std::fs::write(&tmp, template).unwrap();
-        let mut cfg = crate::config::load_config(&tmp).unwrap();
-        cfg.mode = mode;
-        let _ = std::fs::remove_file(&tmp);
-        cfg
-    }
 
     #[test]
     fn naive_default() {
@@ -512,22 +513,11 @@ mod find_and_replace {
 
 #[cfg(test)]
 mod unwrap_exit_params {
-    use crate::{clink::Clink, config::ClinkConfig, mode::Mode};
-
-    fn test_config(mode: Mode) -> ClinkConfig {
-        let id = std::thread::current().id();
-        let tmp = std::env::temp_dir().join(format!("clink_test_exit_cfg_{id:?}.toml"));
-        let template = include_str!("default_config.toml");
-        std::fs::write(&tmp, template).unwrap();
-        let mut cfg = crate::config::load_config(&tmp).unwrap();
-        cfg.mode = mode;
-        let _ = std::fs::remove_file(&tmp);
-        cfg
-    }
+    use crate::{clink::Clink, mode::Mode};
 
     #[test]
     fn has_exit_url() {
-        let clink = Clink::new(test_config(Mode::Remove));
+        let clink = Clink::new(super::test_config(Mode::Remove));
         assert_eq!(
             clink.try_unwrap_redirect(
                 "https://exit.sc/?url=https%3A%2F%2Fopen.spotify.com%2Fartist%2F3tEV3J5gW5BDMrJqE3NaBy%3Fsi%3D1mLk6MZSRGuol8rgwCe_Cg"
@@ -545,7 +535,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn has_no_exit_url() {
-        let clink = Clink::new(test_config(Mode::Remove));
+        let clink = Clink::new(super::test_config(Mode::Remove));
         assert_eq!(
             clink.try_unwrap_redirect(
                 "https://open.spotify.com/artist/3tEV3J5gW5BDMrJqE3NaBy?si=1mLk6MZSRGuol8rgwCe_Cg"
@@ -556,7 +546,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn has_exit_url_google_it() {
-        let clink = Clink::new(test_config(Mode::Remove));
+        let clink = Clink::new(super::test_config(Mode::Remove));
         assert_eq!(
             clink
                 .try_unwrap_redirect("https://www.google.it/url?url=https%3A%2F%2Fexample.com&sa=t")
@@ -567,7 +557,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn has_exit_url_google_q_param() {
-        let clink = Clink::new(test_config(Mode::Remove));
+        let clink = Clink::new(super::test_config(Mode::Remove));
         assert_eq!(
             clink
                 .try_unwrap_redirect(
@@ -580,7 +570,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn has_exit_url_bing() {
-        let clink = Clink::new(test_config(Mode::Remove));
+        let clink = Clink::new(super::test_config(Mode::Remove));
         assert_eq!(
             clink
                 .try_unwrap_redirect("https://bing.com/ck/a?u=https%3A%2F%2Fexample.com&foo=bar")
@@ -591,7 +581,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn amazon_com_tracking_stripped() {
-        let clink = Clink::new(test_config(Mode::Remove));
+        let clink = Clink::new(super::test_config(Mode::Remove));
         assert_eq!(
             clink
                 .find_and_replace(
@@ -604,7 +594,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn youtube_music_si_stripped() {
-        let clink = Clink::new(test_config(Mode::Remove));
+        let clink = Clink::new(super::test_config(Mode::Remove));
         assert_eq!(
             clink
                 .find_and_replace(
@@ -617,7 +607,7 @@ mod unwrap_exit_params {
 
     #[test]
     fn has_exit_url_but_no_exit_param() {
-        let clink = Clink::new(test_config(Mode::Remove));
+        let clink = Clink::new(super::test_config(Mode::Remove));
         assert_eq!(
             clink.try_unwrap_redirect("https://exit.sc/?foo=bar").0,
             "https://exit.sc/?foo=bar"

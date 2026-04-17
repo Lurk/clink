@@ -1,4 +1,5 @@
-use crate::config::{RemoteFormat, RemotePatterns, load_config};
+use crate::config::load_config;
+use crate::remote::{RemoteFormat, RemotePatterns};
 use crate::runtime;
 use std::path::Path;
 

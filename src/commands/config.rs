@@ -1,4 +1,5 @@
-use crate::config::{ClinkConfig, load_config, resolve_patterns};
+use crate::config::{ClinkConfig, load_config};
+use crate::remote::resolve_patterns;
 use crate::runtime;
 use std::collections::HashSet;
 use std::fmt::Write as _;
@@ -80,19 +81,14 @@ fn build_diff(config_path: &Path) -> Result<String, String> {
     Ok(out)
 }
 
-fn collect_all_rules(config: &ClinkConfig) -> HashSet<String> {
+fn collect_all<F>(config: &ClinkConfig, field: F) -> HashSet<String>
+where
+    F: Fn(&crate::provider::ProviderConfig) -> &[String],
+{
     config
         .providers
         .iter()
-        .flat_map(|(name, p)| p.rules.iter().map(move |r| format!("{name}:{r}")))
-        .collect()
-}
-
-fn collect_all_redirections(config: &ClinkConfig) -> HashSet<String> {
-    config
-        .providers
-        .iter()
-        .flat_map(|(name, p)| p.redirections.iter().map(move |r| format!("{name}:{r}")))
+        .flat_map(|(name, p)| field(p).iter().map(move |r| format!("{name}:{r}")))
         .collect()
 }
 
@@ -122,8 +118,8 @@ fn diff_configs(loaded: &ClinkConfig, current: &ClinkConfig, out: &mut String) -
         .unwrap();
     }
 
-    let loaded_rules = collect_all_rules(loaded);
-    let current_rules = collect_all_rules(current);
+    let loaded_rules = collect_all(loaded, |p| &p.rules);
+    let current_rules = collect_all(current, |p| &p.rules);
 
     let added_rules: Vec<&String> = current_rules.difference(&loaded_rules).collect();
     let removed_rules: Vec<&String> = loaded_rules.difference(&current_rules).collect();
@@ -147,8 +143,8 @@ fn diff_configs(loaded: &ClinkConfig, current: &ClinkConfig, out: &mut String) -
         }
     }
 
-    let loaded_redirections = collect_all_redirections(loaded);
-    let current_redirections = collect_all_redirections(current);
+    let loaded_redirections = collect_all(loaded, |p| &p.redirections);
+    let current_redirections = collect_all(current, |p| &p.redirections);
 
     let added_redirections: Vec<&String> = current_redirections
         .difference(&loaded_redirections)
