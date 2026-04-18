@@ -200,14 +200,13 @@ redirections = ['^https?://[a-z0-9.-]*linkedin\.com/authwall\?.*?sessionRedirect
 url_pattern = '^https?://mora\.jp'
 redirections = ['^https?://mora\.jp/cart\?.*?returnUrl=([^&]+)']
 
-# Optional: fetch providers from a remote URL.
+# Fetch providers from a remote URL.
 # Supported formats:
 #   clearurls — ClearURLs data.min.json (https://docs.clearurls.xyz/1.26.1/specs/rules/)
 #   clink     — native clink TOML format
-#
-# [remote]
-# url = 'https://rules2.clearurls.xyz/data.min.json'
-# format = 'clearurls'
+[remote]
+url = 'https://rules2.clearurls.xyz/data.min.json'
+format = 'clearurls'
 ```
 
 ### mode
@@ -258,10 +257,12 @@ The `url_pattern` ensures this redirection only fires on Google domains. The reg
 
 This feature is heavily inspired by [musicbrainz-bot](https://github.com/Freso/musicbrainz-bot/blob/82e37124cdea83f639d133136809fcb898a3ff2b/exit_url_cleanup.py#L19-L38)
 
-### remote (optional)
+### remote
 
 Fetch providers from a remote URL. Remote providers serve as a base;
 your local providers are merged on top.
+
+By default, clink uses [ClearURLs](https://docs.clearurls.xyz) as the remote source:
 
 ```toml
 [remote]
@@ -273,7 +274,7 @@ Supported formats:
 - `clearurls` — [ClearURLs](https://docs.clearurls.xyz) `data.min.json` (LGPLv3, maintained by Kevin R. / AMinber). ClearURLs rules map 1:1 to providers — domain scoping, regex rules, and redirections all come through.
 - `clink` — clink-native TOML with providers
 
-After adding the `[remote]` section, run:
+To fetch the remote patterns, run:
 
 ```sh
 clink update
@@ -281,6 +282,8 @@ clink update
 
 This fetches the remote patterns and caches them locally. Run `clink update` again
 whenever you want to pull the latest version. Then `clink reload` to apply.
+
+To disable remote patterns, remove the `[remote]` section from the config.
 
 ## Build
 

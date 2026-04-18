@@ -28,7 +28,10 @@ impl ClinkConfig {
             sleep_duration: 150,
             providers: HashMap::new(),
             verbose: false,
-            remote: None,
+            remote: Some(crate::remote::Remote {
+                url: "https://rules2.clearurls.xyz/data.minify.json".into(),
+                format: crate::remote::RemoteFormat::ClearUrls,
+            }),
         }
     }
 

@@ -11,7 +11,7 @@ pub fn execute(config_path: &Path) -> Result<(), String> {
          Add a [remote] section with url and format to use `clink update`.\n\
          Example:\n\n\
          [remote]\n\
-         url = 'https://raw.githubusercontent.com/AMinber/ClearUrls/master/data/data.min.json'\n\
+         url = 'https://rules2.clearurls.xyz/data.min.json'\n\
          format = 'clearurls'"
             .to_string(),
     )?;

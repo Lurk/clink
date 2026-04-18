@@ -115,11 +115,10 @@ redirections = ['^https?://[a-z0-9.-]*linkedin\.com/authwall\?.*?sessionRedirect
 url_pattern = '^https?://mora\.jp'
 redirections = ['^https?://mora\.jp/cart\?.*?returnUrl=([^&]+)']
 
-# Optional: fetch providers from a remote URL.
+# Fetch providers from a remote URL.
 # Supported formats:
 #   clearurls — ClearURLs data.min.json (https://docs.clearurls.xyz/1.26.1/specs/rules/)
 #   clink     — native clink TOML format
-#
-# [remote]
-# url = 'https://rules2.clearurls.xyz/data.min.json'
-# format = 'clearurls'
+[remote]
+url = 'https://rules2.clearurls.xyz/data.min.json'
+format = 'clearurls'

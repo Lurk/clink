@@ -44,7 +44,7 @@ mod tests {
         );
         assert!(
             content.contains("[remote]"),
-            "template should contain commented remote section"
+            "template should contain remote section"
         );
 
         let _ = std::fs::remove_file(&tmp);

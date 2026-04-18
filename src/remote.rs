@@ -72,10 +72,25 @@ mod tests {
     }
 
     #[test]
-    fn test_config_without_remote_section() {
+    fn test_default_config_has_clearurls_remote() {
         let cfg = ClinkConfig::default();
         let toml_str = toml::to_string_pretty(&cfg).unwrap();
         let loaded: ClinkConfig = toml::from_str(&toml_str).unwrap();
+        let remote = loaded.remote.unwrap();
+        assert!(remote.url.contains("clearurls"));
+        assert_eq!(remote.format, RemoteFormat::ClearUrls);
+    }
+
+    #[test]
+    fn test_config_without_remote_section() {
+        let toml_str = r#"
+mode = 'remove'
+replace_to = 'clink'
+sleep_duration = 150
+
+[providers]
+"#;
+        let loaded: ClinkConfig = toml::from_str(toml_str).unwrap();
         assert!(loaded.remote.is_none());
     }
 
