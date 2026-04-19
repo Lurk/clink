@@ -156,7 +156,7 @@ fn migrate_old_config(config_path: &Path, raw: &toml::Value) -> Result<ClinkConf
         remote,
     };
 
-    let backup_path = config_path.with_extension("toml.backup");
+    let backup_path = next_backup_path(config_path);
     std::fs::copy(config_path, &backup_path)
         .map_err(|e| format!("Failed to back up config to {}: {e}", backup_path.display()))?;
 
@@ -171,6 +171,23 @@ fn migrate_old_config(config_path: &Path, raw: &toml::Value) -> Result<ClinkConf
     );
 
     Ok(config)
+}
+
+// Pick a backup path that doesn't exist yet so a re-migration never clobbers
+// a prior backup. Falls back to the unsuffixed name after 1000 rotations,
+// which would only happen if a user kept re-migrating the same file.
+fn next_backup_path(config_path: &Path) -> PathBuf {
+    let base = config_path.with_extension("toml.backup");
+    if !base.exists() {
+        return base;
+    }
+    for i in 1..1000 {
+        let candidate = config_path.with_extension(format!("toml.backup.{i}"));
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    base
 }
 
 pub fn fallback_config_path(path: Option<PathBuf>) -> PathBuf {
@@ -257,6 +274,48 @@ exit = [['exit.sc/', 'url']]
         assert!(
             migrated_content.contains("[providers"),
             "migrated config should have providers section"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_migration_does_not_overwrite_existing_backup() {
+        let dir = std::env::temp_dir().join("clink_test_migrate_backup_rotate");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let config_path = dir.join("config.toml");
+        let backup_path = config_path.with_extension("toml.backup");
+
+        let sentinel = "# this backup is from a previous migration; do not lose it\n";
+        std::fs::write(&backup_path, sentinel).unwrap();
+
+        let old_config = r#"
+mode = 'remove'
+replace_to = 'clink'
+sleep_duration = 150
+params = ['fbclid']
+"#;
+        std::fs::write(&config_path, old_config).unwrap();
+
+        load_config(&config_path).unwrap();
+
+        let preserved = std::fs::read_to_string(&backup_path).unwrap();
+        assert_eq!(
+            preserved, sentinel,
+            "pre-existing backup must not be overwritten by migration"
+        );
+
+        let rotated = config_path.with_extension("toml.backup.1");
+        assert!(
+            rotated.is_file(),
+            "migration should write the new backup to a rotated path"
+        );
+        let rotated_content = std::fs::read_to_string(&rotated).unwrap();
+        assert!(
+            rotated_content.contains("params = ['fbclid']"),
+            "rotated backup must contain the pre-migration config"
         );
 
         let _ = std::fs::remove_dir_all(&dir);
