@@ -1,7 +1,7 @@
 use crate::config::load_config;
 use crate::remote::{RemoteFormat, RemotePatterns};
 use crate::runtime;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub fn execute(config_path: &Path, write_snapshot: Option<&Path>) -> Result<(), String> {
     let cfg = load_config(config_path)?;
@@ -57,12 +57,32 @@ fn write_patterns_to(path: &Path, patterns: &RemotePatterns) -> Result<(usize, u
     }
     let content = toml::to_string_pretty(patterns)
         .map_err(|e| format!("Failed to serialize patterns: {e}"))?;
-    std::fs::write(path, &content)
-        .map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
+    write_atomic(path, &content)?;
 
     let provider_count = patterns.providers.len();
     let rule_count: usize = patterns.providers.values().map(|p| p.rules.len()).sum();
     Ok((provider_count, rule_count))
+}
+
+// Write to a sibling `.tmp` file then `rename` over the target so a partial
+// write (Ctrl-C, OOM, power loss) can never leave a corrupt cache that would
+// silently fall back to the embedded snapshot at next clink start.
+fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
+    let tmp = {
+        let mut p = path.as_os_str().to_os_string();
+        p.push(".tmp");
+        PathBuf::from(p)
+    };
+    std::fs::write(&tmp, content).map_err(|e| format!("Failed to write {}: {e}", tmp.display()))?;
+    std::fs::rename(&tmp, path).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        format!(
+            "Failed to rename {} to {}: {e}",
+            tmp.display(),
+            path.display()
+        )
+    })?;
+    Ok(())
 }
 
 fn translate_clearurls(body: &str) -> Result<RemotePatterns, String> {
@@ -167,6 +187,71 @@ redirections = ['^https?://exit\.sc/\?.*?url=([^&]+)']
         let content = std::fs::read_to_string(&path).unwrap();
         assert!(content.contains("fbclid"));
         assert!(content.contains("gclid"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_write_patterns_to_is_atomic_no_tmp_leftover() {
+        let dir = std::env::temp_dir().join("clink_test_write_patterns_atomic");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("out.toml");
+        let tmp_path = dir.join("out.toml.tmp");
+
+        let mut providers = std::collections::HashMap::new();
+        providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["fbclid".into()],
+                ..Default::default()
+            },
+        );
+        let patterns = RemotePatterns { providers };
+
+        write_patterns_to(&path, &patterns).unwrap();
+
+        assert!(path.is_file(), "target file must exist after write");
+        assert!(
+            !tmp_path.exists(),
+            "no .tmp sibling should remain after a successful atomic write"
+        );
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(content.contains("fbclid"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_write_patterns_to_overwrites_existing_target() {
+        let dir = std::env::temp_dir().join("clink_test_write_patterns_overwrite");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("out.toml");
+
+        std::fs::write(&path, "stale = 'content'\n").unwrap();
+
+        let mut providers = std::collections::HashMap::new();
+        providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["fresh_rule".into()],
+                ..Default::default()
+            },
+        );
+        let patterns = RemotePatterns { providers };
+
+        write_patterns_to(&path, &patterns).unwrap();
+
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            content.contains("fresh_rule"),
+            "target must be replaced with new content"
+        );
+        assert!(
+            !content.contains("stale"),
+            "stale content must be gone after atomic rename"
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }
