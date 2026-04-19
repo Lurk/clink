@@ -44,10 +44,6 @@ impl CompiledRules {
     pub fn is_tracked(&self, param: &str) -> bool {
         self.literals.contains(param) || self.patterns.iter().any(|re| re.is_match(param))
     }
-
-    pub fn is_empty(&self) -> bool {
-        self.literals.is_empty() && self.patterns.is_empty()
-    }
 }
 
 pub struct CompiledProvider {

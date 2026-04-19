@@ -39,8 +39,12 @@ mod tests {
         assert!(content.contains("mode"));
         assert!(content.contains("sleep_duration"));
         assert!(
-            content.contains("[providers.global]"),
-            "template should contain global provider"
+            content.contains("[providers]"),
+            "template should contain providers section"
+        );
+        assert!(
+            !content.contains("[providers.global]"),
+            "template should no longer bake in global provider rules"
         );
         assert!(
             content.contains("[remote]"),
@@ -79,5 +83,31 @@ mod tests {
         );
 
         let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn test_template_with_no_cache_has_effective_builtin_providers() {
+        let dir = std::env::temp_dir().join("clink_test_init_builtin_effective");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let config_path = dir.join("config.toml");
+        execute(&config_path).unwrap();
+
+        let mut cfg = crate::config::load_config(&config_path).unwrap();
+        // Templated config has no providers; cache dir is empty here.
+        assert!(cfg.providers.is_empty());
+        crate::remote::resolve_patterns(&mut cfg, &dir);
+
+        let has_fbclid = cfg
+            .providers
+            .values()
+            .any(|p| p.rules.iter().any(|r| r.contains("fbclid")));
+        assert!(
+            has_fbclid,
+            "fresh install with no cache must clean fbclid via builtin fallback"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

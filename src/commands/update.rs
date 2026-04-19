@@ -3,7 +3,7 @@ use crate::remote::{RemoteFormat, RemotePatterns};
 use crate::runtime;
 use std::path::Path;
 
-pub fn execute(config_path: &Path) -> Result<(), String> {
+pub fn execute(config_path: &Path, write_snapshot: Option<&Path>) -> Result<(), String> {
     let cfg = load_config(config_path)?;
 
     let remote = cfg.remote.ok_or(
@@ -30,25 +30,39 @@ pub fn execute(config_path: &Path) -> Result<(), String> {
         RemoteFormat::Clink => parse_clink_toml(&body)?,
     };
 
-    let provider_count = patterns.providers.len();
-    let rule_count: usize = patterns.providers.values().map(|p| p.rules.len()).sum();
-
-    let cache_path = runtime::data_dir().join("remote_patterns.toml");
-    if let Some(parent) = cache_path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create cache directory: {e}"))?;
+    if let Some(snapshot_path) = write_snapshot {
+        let (provider_count, rule_count) = write_patterns_to(snapshot_path, &patterns)?;
+        println!(
+            "Wrote snapshot with {provider_count} providers and {rule_count} rules to {}",
+            snapshot_path.display()
+        );
+    } else {
+        let cache_path = runtime::data_dir().join("remote_patterns.toml");
+        let (provider_count, rule_count) = write_patterns_to(&cache_path, &patterns)?;
+        println!(
+            "Cached {provider_count} providers with {rule_count} rules to {}",
+            cache_path.display()
+        );
     }
 
-    let content = toml::to_string_pretty(&patterns)
-        .map_err(|e| format!("Failed to serialize patterns: {e}"))?;
-    std::fs::write(&cache_path, &content).map_err(|e| format!("Failed to write cache: {e}"))?;
-
-    println!(
-        "Cached {provider_count} providers with {rule_count} rules to {}",
-        cache_path.display()
-    );
-
     Ok(())
+}
+
+fn write_patterns_to(path: &Path, patterns: &RemotePatterns) -> Result<(usize, usize), String> {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create directory {}: {e}", parent.display()))?;
+        }
+    }
+    let content = toml::to_string_pretty(patterns)
+        .map_err(|e| format!("Failed to serialize patterns: {e}"))?;
+    std::fs::write(path, &content)
+        .map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
+
+    let provider_count = patterns.providers.len();
+    let rule_count: usize = patterns.providers.values().map(|p| p.rules.len()).sum();
+    Ok((provider_count, rule_count))
 }
 
 fn translate_clearurls(body: &str) -> Result<RemotePatterns, String> {
@@ -127,5 +141,50 @@ redirections = ['^https?://exit\.sc/\?.*?url=([^&]+)']
     fn test_translate_clearurls_invalid() {
         let result = translate_clearurls("not json");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_write_patterns_to_writes_toml() {
+        let dir = std::env::temp_dir().join("clink_test_write_patterns_to");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("out.toml");
+
+        let mut providers = std::collections::HashMap::new();
+        providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["fbclid".into(), "gclid".into()],
+                ..Default::default()
+            },
+        );
+        let patterns = RemotePatterns { providers };
+
+        let (provider_count, rule_count) = write_patterns_to(&path, &patterns).unwrap();
+
+        assert_eq!(provider_count, 1);
+        assert_eq!(rule_count, 2);
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(content.contains("fbclid"));
+        assert!(content.contains("gclid"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_write_patterns_to_creates_parent_dir() {
+        let dir = std::env::temp_dir().join("clink_test_write_patterns_parent/nested");
+        let _ =
+            std::fs::remove_dir_all(std::env::temp_dir().join("clink_test_write_patterns_parent"));
+        let path = dir.join("out.toml");
+
+        let patterns = RemotePatterns {
+            providers: std::collections::HashMap::new(),
+        };
+        write_patterns_to(&path, &patterns).unwrap();
+        assert!(path.is_file());
+
+        let _ =
+            std::fs::remove_dir_all(std::env::temp_dir().join("clink_test_write_patterns_parent"));
     }
 }

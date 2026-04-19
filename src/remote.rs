@@ -26,27 +26,39 @@ pub struct RemotePatterns {
 
 pub fn resolve_patterns(config: &mut ClinkConfig, data_dir: &Path) {
     let cache_path = data_dir.join("remote_patterns.toml");
-    let Ok(content) = std::fs::read_to_string(&cache_path) else {
-        return;
-    };
-    let Ok(remote) = toml::from_str::<RemotePatterns>(&content) else {
-        return;
-    };
 
-    for (name, remote_provider) in remote.providers {
+    let cache = std::fs::read_to_string(&cache_path)
+        .ok()
+        .and_then(|content| toml::from_str::<RemotePatterns>(&content).ok());
+
+    if let Some(remote) = cache {
+        if config.verbose {
+            eprintln!("using cached remote patterns");
+        }
+        merge_patterns(config, &remote);
+    } else {
+        if config.verbose {
+            eprintln!("using built-in patterns");
+        }
+        merge_patterns(config, crate::builtin::patterns());
+    }
+}
+
+fn merge_patterns(config: &mut ClinkConfig, source: &RemotePatterns) {
+    for (name, source_provider) in &source.providers {
         config
             .providers
-            .entry(name)
+            .entry(name.clone())
             .and_modify(|local| {
-                local.rules.extend(remote_provider.rules.clone());
+                local.rules.extend(source_provider.rules.iter().cloned());
                 local
                     .redirections
-                    .extend(remote_provider.redirections.clone());
+                    .extend(source_provider.redirections.iter().cloned());
                 if local.url_pattern.is_none() {
-                    local.url_pattern.clone_from(&remote_provider.url_pattern);
+                    local.url_pattern.clone_from(&source_provider.url_pattern);
                 }
             })
-            .or_insert(remote_provider);
+            .or_insert_with(|| source_provider.clone());
     }
 }
 
@@ -186,31 +198,66 @@ sleep_duration = 150
     }
 
     #[test]
-    fn test_resolve_no_cache_keeps_local() {
-        let dir = std::env::temp_dir().join("clink_test_resolve_no_cache");
+    fn test_resolve_falls_back_to_builtin_when_no_cache() {
+        let dir = std::env::temp_dir().join("clink_test_resolve_builtin_fallback");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
-        let mut local_providers = HashMap::new();
-        local_providers.insert(
-            "global".to_string(),
-            crate::provider::ProviderConfig {
-                rules: vec!["local_param".into()],
-                ..Default::default()
-            },
-        );
-        let mut cfg = ClinkConfig {
-            providers: local_providers,
-            ..ClinkConfig::default()
-        };
+        let mut cfg = ClinkConfig::default();
+        // Sanity: default config ships with no providers now.
+        assert!(cfg.providers.is_empty());
 
         resolve_patterns(&mut cfg, &dir);
 
-        assert_eq!(cfg.providers.len(), 1);
+        let has_fbclid = cfg
+            .providers
+            .values()
+            .any(|p| p.rules.iter().any(|r| r.contains("fbclid")));
         assert!(
-            cfg.providers["global"]
-                .rules
-                .contains(&"local_param".to_string())
+            has_fbclid,
+            "resolve_patterns without cache must fall back to builtin and populate fbclid"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_resolve_cache_replaces_builtin() {
+        let dir = std::env::temp_dir().join("clink_test_resolve_cache_replaces_builtin");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        // Cache provides ONLY `only_in_cache`, not any of the builtin rules.
+        let mut cache_providers = HashMap::new();
+        cache_providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["only_in_cache".into()],
+                ..Default::default()
+            },
+        );
+        let cache = RemotePatterns {
+            providers: cache_providers,
+        };
+        let cache_path = dir.join("remote_patterns.toml");
+        std::fs::write(&cache_path, toml::to_string(&cache).unwrap()).unwrap();
+
+        let mut cfg = ClinkConfig::default();
+        resolve_patterns(&mut cfg, &dir);
+
+        let has_cache_rule = cfg
+            .providers
+            .values()
+            .any(|p| p.rules.iter().any(|r| r == "only_in_cache"));
+        let has_builtin_rule = cfg
+            .providers
+            .values()
+            .any(|p| p.rules.iter().any(|r| r.contains("fbclid")));
+
+        assert!(has_cache_rule, "cache rule must be present");
+        assert!(
+            !has_builtin_rule,
+            "builtin must not merge in when cache is present"
         );
 
         let _ = std::fs::remove_dir_all(&dir);

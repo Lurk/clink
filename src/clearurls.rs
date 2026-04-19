@@ -59,10 +59,16 @@ pub fn translate(json: &str) -> Result<TranslationResult, String> {
             rules_translated += 1;
         }
 
+        let (clink_name, url_pattern) = if name == "globalRules" {
+            ("global".to_string(), None)
+        } else {
+            (name.clone(), Some(cu_provider.url_pattern.clone()))
+        };
+
         providers.insert(
-            name.clone(),
+            clink_name,
             ProviderConfig {
-                url_pattern: Some(cu_provider.url_pattern.clone()),
+                url_pattern,
                 rules,
                 redirections: cu_provider.redirections.clone(),
             },

@@ -29,7 +29,7 @@ impl ClinkConfig {
             providers: HashMap::new(),
             verbose: false,
             remote: Some(crate::remote::Remote {
-                url: "https://rules2.clearurls.xyz/data.minify.json".into(),
+                url: "https://rules2.clearurls.xyz/data.min.json".into(),
                 format: crate::remote::RemoteFormat::ClearUrls,
             }),
         }
@@ -39,10 +39,6 @@ impl ClinkConfig {
         let mut warnings = Vec::new();
         if self.sleep_duration == 0 {
             warnings.push("sleep_duration is 0, this will cause 100% CPU usage".to_string());
-        }
-        let has_rules = self.providers.values().any(|p| !p.rules.is_empty());
-        if !has_rules {
-            warnings.push("No tracking params configured — clink won't clean anything".to_string());
         }
         warnings
     }
@@ -194,28 +190,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_validate_default_config() {
-        let cfg = ClinkConfig::default();
-        let warnings = cfg.validate();
-        assert!(
-            warnings.iter().any(|w| w.contains("params")),
-            "default config with no providers should warn"
-        );
-    }
-
-    #[test]
     fn test_validate_zero_sleep_duration() {
         let mut cfg = ClinkConfig::default();
         cfg.sleep_duration = 0;
         let warnings = cfg.validate();
         assert!(warnings.iter().any(|w| w.contains("sleep_duration")));
-    }
-
-    #[test]
-    fn test_validate_empty_params() {
-        let cfg = ClinkConfig::default();
-        let warnings = cfg.validate();
-        assert!(warnings.iter().any(|w| w.contains("params")));
     }
 
     #[test]

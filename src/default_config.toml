@@ -14,106 +14,16 @@ replace_to = 'clink'
 # How often clink checks the clipboard, in milliseconds
 sleep_duration = 150
 
-# Providers define URL-scoped rules for param stripping and redirect unwrapping.
-# Each provider has:
-#   url_pattern  — regex matching URLs this provider applies to (omit for global)
-#   rules        — param names to strip (literal strings or regexes)
-#   redirections — regexes with one capture group extracting the destination URL
+# Built-in tracking rules ship with clink (sourced from ClearURLs, LGPL-3.0).
+# Run `clink update` to replace them with the latest version from the remote.
+# Add your own custom rules below — they are merged on top of built-ins.
+[providers]
 
-[providers.global]
-rules = [
-    # Google
-    'dclid',
-    'gclid',
-    'gclsrc',
-    '_ga',
-    '_gl',
-    # Meta (Facebook/Instagram)
-    'fbclid',
-    'igshid',
-    'igsh',
-    # Microsoft/Bing
-    'msclkid',
-    # Twitter/X
-    'twclid',
-    # TikTok
-    'ttclid',
-    # LinkedIn
-    'li_fat_id',
-    # Yandex
-    'yclid',
-    # UTM family
-    'utm_id',
-    'utm_source',
-    'utm_source_platform',
-    'utm_creative_format',
-    'utm_medium',
-    'utm_term',
-    'utm_campaign',
-    'utm_content',
-    # Awin (formerly Zanox)
-    'zanpid',
-    # Mailchimp
-    'mc_cid',
-    'mc_eid',
-    # HubSpot
-    '_hsenc',
-    '_hsmi',
-    # Marketo
-    'mkt_tok',
-    # Drip
-    '__s',
-    # Openstat
-    '_openstat',
-    # Vero
-    'vero_id',
-    # Alibaba/AliExpress
-    'spm',
-]
-
-[providers.youtube]
-url_pattern = '^https?://([a-z0-9-]+\.)*?(youtube\.com|youtu\.be)'
-rules = ['si']
-
-[providers.amazon]
-url_pattern = '^https?://([a-z0-9-]+\.)*?amazon\.(com|de|co\.uk|co\.jp|fr|it|es|ca|com\.au|com\.br|com\.mx|nl|pl|se|sg|in|com\.be|com\.tr|eg|sa|ae)'
-rules = ['sp_csd', 'pd_rd_w', 'pd_rd_wg', 'pd_rd_i', 'pd_rd_r', 'pf_rd_r', 'pf_rd_p', 't', 'psc', 'content-id']
-
-[providers.google]
-url_pattern = '^https?://([a-z0-9-]+\.)*?google\.[a-z]{2,}'
-redirections = ['^https?://[a-z0-9.-]*google\.[a-z.]+/url\?.*?(?:url|q)=([^&]+)']
-
-[providers.facebook]
-url_pattern = '^https?://([a-z0-9-]+\.)*?facebook\.com'
-redirections = ['^https?://[a-z0-9.-]*facebook\.com/(?:l|confirmemail|login)\.php\?.*?(?:u|next)=([^&]+)']
-
-[providers.instagram]
-url_pattern = '^https?://l\.instagram\.com'
-redirections = ['^https?://l\.instagram\.com/\?.*?u=([^&]+)']
-
-[providers.vk]
-url_pattern = '^https?://vk\.com'
-redirections = ['^https?://vk\.com/away\.php\?.*?to=([^&]+)']
-
-[providers.exitsc]
-url_pattern = '^https?://exit\.sc'
-redirections = ['^https?://exit\.sc/\?.*?url=([^&]+)']
-
-[providers.bing]
-url_pattern = '^https?://([a-z0-9-]+\.)*?bing\.com'
-redirections = ['^https?://bing\.com/ck/a\?.*?u=([^&]+)']
-
-[providers.youtube_redirect]
-url_pattern = '^https?://([a-z0-9-]+\.)*?youtube\.com/redirect'
-redirections = ['^https?://[a-z0-9.-]*youtube\.com/redirect\?.*?q=([^&]+)']
-
-[providers.linkedin]
-url_pattern = '^https?://([a-z0-9-]+\.)*?linkedin\.com'
-redirections = ['^https?://[a-z0-9.-]*linkedin\.com/authwall\?.*?sessionRedirect=([^&]+)']
-
-[providers.mora]
-url_pattern = '^https?://mora\.jp'
-redirections = ['^https?://mora\.jp/cart\?.*?returnUrl=([^&]+)']
+# Example — uncomment and edit:
+# [providers.example]
+# url_pattern = '^https?://example\.com'
+# rules = ['my_tracker']
+# redirections = ['^https?://example\.com/out\?.*?u=([^&]+)']
 
 # Fetch providers from a remote URL.
 # Supported formats:

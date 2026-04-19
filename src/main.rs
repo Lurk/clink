@@ -1,3 +1,4 @@
+mod builtin;
 mod clearurls;
 mod cli;
 mod clink;
@@ -37,7 +38,9 @@ fn main() {
         Some(Command::Config { diff, reset }) => {
             commands::config::execute(&config_path, diff, reset)
         }
-        Some(Command::Update) => commands::update::execute(&config_path),
+        Some(Command::Update { write_snapshot }) => {
+            commands::update::execute(&config_path, write_snapshot.as_deref())
+        }
     };
 
     if let Err(e) = result {

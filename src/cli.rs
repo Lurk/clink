@@ -48,7 +48,12 @@ pub enum Command {
         reset: bool,
     },
     /// Fetch and cache remote patterns
-    Update,
+    Update {
+        /// Write translated patterns to the given path instead of the cache directory.
+        /// Used to regenerate the embedded `src/builtin_patterns.toml`.
+        #[arg(long, value_name = "PATH")]
+        write_snapshot: Option<PathBuf>,
+    },
 }
 
 #[cfg(test)]
@@ -146,6 +151,22 @@ mod tests {
     #[test]
     fn test_parse_update() {
         let cli = Cli::parse_from(["clink", "update"]);
-        assert!(matches!(cli.command, Some(Command::Update)));
+        assert!(matches!(
+            cli.command,
+            Some(Command::Update {
+                write_snapshot: None
+            })
+        ));
+    }
+
+    #[test]
+    fn test_parse_update_write_snapshot() {
+        let cli = Cli::parse_from(["clink", "update", "--write-snapshot", "/tmp/snap.toml"]);
+        match cli.command {
+            Some(Command::Update { write_snapshot }) => {
+                assert_eq!(write_snapshot, Some(PathBuf::from("/tmp/snap.toml")));
+            }
+            other => panic!("expected Update with write_snapshot, got {other:?}"),
+        }
     }
 }

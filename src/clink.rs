@@ -69,11 +69,11 @@ impl Clink {
             #[allow(clippy::cast_possible_truncation)]
             let original_param_count = l.query_pairs().count() as u32;
 
-            let matching_provider = self.find_matching_provider(unwrapped.as_str());
+            let matching_providers = self.find_matching_providers(unwrapped.as_str());
 
             let query = self.process_query(
                 l.query_pairs().map(|(k, v)| (k.to_string(), v.to_string())),
-                matching_provider,
+                &matching_providers,
             );
             #[allow(clippy::cast_possible_truncation)]
             let new_param_count = query.len() as u32;
@@ -110,24 +110,27 @@ impl Clink {
         }
     }
 
-    fn find_matching_provider(&self, url: &str) -> Option<&CompiledProvider> {
-        self.scoped_providers.iter().find(|p| p.matches_url(url))
+    fn find_matching_providers(&self, url: &str) -> Vec<&CompiledProvider> {
+        self.scoped_providers
+            .iter()
+            .filter(|p| p.matches_url(url))
+            .collect()
     }
 
     fn process_query(
         &self,
         query: impl Iterator<Item = (String, String)>,
-        provider: Option<&CompiledProvider>,
+        providers: &[&CompiledProvider],
     ) -> Vec<(String, String)> {
         match self.config.mode {
-            Mode::Remove => self.filter(query, provider),
-            Mode::Replace => self.replace(query, provider),
+            Mode::Remove => self.filter(query, providers),
+            Mode::Replace => self.replace(query, providers),
             Mode::YourMom => {
                 let date = Utc::now();
                 if date.month() == 5 && date.day() == 9 {
-                    self.filter(query, provider)
+                    self.filter(query, providers)
                 } else {
-                    let mut tmp = self.filter(query, provider);
+                    let mut tmp = self.filter(query, providers);
                     tmp.push(("utm_source".to_string(), "your_mom".to_string()));
                     tmp
                 }
@@ -136,7 +139,7 @@ impl Clink {
                 let mut rng = rand::rng();
                 query
                     .map(|(key, value)| {
-                        if self.is_tracked(&key, provider) {
+                        if self.is_tracked(&key, providers) {
                             (
                                 key,
                                 swap_two_chars(
@@ -154,28 +157,28 @@ impl Clink {
         }
     }
 
-    fn is_tracked(&self, key: &str, provider: Option<&CompiledProvider>) -> bool {
-        self.global_rules.is_tracked(key) || provider.is_some_and(|p| p.rules.is_tracked(key))
+    fn is_tracked(&self, key: &str, providers: &[&CompiledProvider]) -> bool {
+        self.global_rules.is_tracked(key) || providers.iter().any(|p| p.rules.is_tracked(key))
     }
 
     fn filter(
         &self,
         query: impl Iterator<Item = (String, String)>,
-        provider: Option<&CompiledProvider>,
+        providers: &[&CompiledProvider],
     ) -> Vec<(String, String)> {
         query
-            .filter(|(key, _)| !self.is_tracked(key, provider))
+            .filter(|(key, _)| !self.is_tracked(key, providers))
             .collect()
     }
 
     fn replace(
         &self,
         query: impl Iterator<Item = (String, String)>,
-        provider: Option<&CompiledProvider>,
+        providers: &[&CompiledProvider],
     ) -> Vec<(String, String)> {
         query
             .map(|(key, value)| {
-                if self.is_tracked(&key, provider) {
+                if self.is_tracked(&key, providers) {
                     (key, self.config.replace_to.clone())
                 } else {
                     (key, value)
@@ -211,6 +214,11 @@ fn test_config(mode: Mode) -> ClinkConfig {
     let mut cfg = crate::config::load_config(&tmp).unwrap();
     cfg.mode = mode;
     let _ = std::fs::remove_file(&tmp);
+    // Mirror production: run::execute always calls resolve_patterns after
+    // load_config, so the builtin fallback supplies the tracking rules.
+    let empty_cache_dir = std::env::temp_dir().join(format!("clink_test_cache_{id:?}"));
+    let _ = std::fs::remove_dir_all(&empty_cache_dir);
+    crate::remote::resolve_patterns(&mut cfg, &empty_cache_dir);
     cfg
 }
 
@@ -352,6 +360,42 @@ mod find_and_replace {
                 .find_and_replace("https://test.test/?foo=dsadsa",)
                 .text,
             "https://test.test/?foo=clink"
+        );
+    }
+
+    #[test]
+    fn overlapping_providers_both_apply() {
+        let mut providers = HashMap::new();
+        providers.insert(
+            "shop_a".to_string(),
+            crate::provider::ProviderConfig {
+                url_pattern: Some(r"^https?://([a-z0-9-]+\.)*?shop\.example".into()),
+                rules: vec!["aff".into()],
+                ..Default::default()
+            },
+        );
+        providers.insert(
+            "shop_b".to_string(),
+            crate::provider::ProviderConfig {
+                url_pattern: Some(r"^https?://shop\.example".into()),
+                rules: vec!["ref".into()],
+                ..Default::default()
+            },
+        );
+        let clink = Clink::new(ClinkConfig {
+            mode: Mode::Remove,
+            replace_to: "clink".to_string(),
+            sleep_duration: 150,
+            providers,
+            verbose: false,
+            remote: None,
+        });
+        assert_eq!(
+            clink
+                .find_and_replace("https://shop.example/item?aff=1&ref=2&keep=ok")
+                .text,
+            "https://shop.example/item?keep=ok",
+            "rules from all matching providers should be applied"
         );
     }
 
@@ -585,10 +629,10 @@ mod unwrap_exit_params {
         assert_eq!(
             clink
                 .find_and_replace(
-                    "https://www.amazon.com/dp/B08N5WRWNW?sp_csd=d2lkZ2V0TmFtZQ&pd_rd_w=abc&ref=foo"
+                    "https://www.amazon.com/dp/B08N5WRWNW?sp_csd=d2lkZ2V0TmFtZQ&pd_rd_w=abc&keep=me"
                 )
                 .text,
-            "https://www.amazon.com/dp/B08N5WRWNW?ref=foo"
+            "https://www.amazon.com/dp/B08N5WRWNW?keep=me"
         );
     }
 
