@@ -52,6 +52,34 @@ pub struct CompiledProvider {
     redirections: Vec<Regex>,
 }
 
+pub fn check_provider(name: &str, config: &ProviderConfig) -> Vec<String> {
+    let mut warnings = Vec::new();
+    if let Some(pattern) = &config.url_pattern {
+        if let Err(e) = Regex::new(pattern) {
+            warnings.push(format!(
+                "[providers.{name}] url_pattern '{pattern}' failed to compile: {e}"
+            ));
+        }
+    }
+    for rule in &config.rules {
+        if rule.contains(REGEX_CHARS) {
+            if let Err(e) = Regex::new(rule) {
+                warnings.push(format!(
+                    "[providers.{name}] rule '{rule}' failed to compile: {e}"
+                ));
+            }
+        }
+    }
+    for redir in &config.redirections {
+        if let Err(e) = Regex::new(redir) {
+            warnings.push(format!(
+                "[providers.{name}] redirection '{redir}' failed to compile: {e}"
+            ));
+        }
+    }
+    warnings
+}
+
 impl CompiledProvider {
     pub fn new(config: &ProviderConfig) -> Option<Self> {
         let pattern_str = config.url_pattern.as_ref()?;
@@ -240,5 +268,88 @@ rules = ["fbclid", "gclid"]
         };
 
         assert!(CompiledProvider::new(&config).is_none());
+    }
+
+    #[test]
+    fn check_provider_returns_empty_for_clean_config() {
+        let config = ProviderConfig {
+            url_pattern: Some(r"^https?://example\.com".to_string()),
+            rules: vec!["fbclid".to_string(), "^utm_".to_string()],
+            redirections: vec![r"url=([^&]+)".to_string()],
+        };
+        assert!(check_provider("test", &config).is_empty());
+    }
+
+    #[test]
+    fn check_provider_skips_url_pattern_when_absent() {
+        let config = ProviderConfig {
+            url_pattern: None,
+            rules: vec!["fbclid".to_string()],
+            redirections: vec![],
+        };
+        assert!(check_provider("global", &config).is_empty());
+    }
+
+    #[test]
+    fn check_provider_flags_bad_url_pattern() {
+        let config = ProviderConfig {
+            url_pattern: Some("[invalid".to_string()),
+            ..Default::default()
+        };
+        let warnings = check_provider("oops", &config);
+        assert_eq!(
+            warnings.len(),
+            1,
+            "expected a single warning, got {warnings:?}"
+        );
+        assert!(warnings[0].contains("oops"));
+        assert!(warnings[0].contains("url_pattern"));
+        assert!(warnings[0].contains("[invalid"));
+    }
+
+    #[test]
+    fn check_provider_flags_bad_rule_regex() {
+        let config = ProviderConfig {
+            url_pattern: Some(r"^https?://x\.com".to_string()),
+            rules: vec!["fbclid".to_string(), "[bad".to_string()],
+            ..Default::default()
+        };
+        let warnings = check_provider("scoped", &config);
+        assert_eq!(
+            warnings.len(),
+            1,
+            "expected a single warning, got {warnings:?}"
+        );
+        assert!(warnings[0].contains("scoped"));
+        assert!(warnings[0].contains("rule"));
+        assert!(warnings[0].contains("[bad"));
+    }
+
+    #[test]
+    fn check_provider_flags_bad_redirection() {
+        let config = ProviderConfig {
+            url_pattern: Some(r"^https?://x\.com".to_string()),
+            redirections: vec!["[bad".to_string()],
+            ..Default::default()
+        };
+        let warnings = check_provider("scoped", &config);
+        assert_eq!(
+            warnings.len(),
+            1,
+            "expected a single warning, got {warnings:?}"
+        );
+        assert!(warnings[0].contains("redirection"));
+        assert!(warnings[0].contains("[bad"));
+    }
+
+    #[test]
+    fn check_provider_skips_literal_rules() {
+        // Literal rules never go through Regex::new, so they can't fail.
+        let config = ProviderConfig {
+            url_pattern: Some(r"^https?://x\.com".to_string()),
+            rules: vec!["fbclid".to_string(), "gclid".to_string()],
+            ..Default::default()
+        };
+        assert!(check_provider("scoped", &config).is_empty());
     }
 }

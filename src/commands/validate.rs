@@ -1,4 +1,7 @@
 use crate::config::load_config;
+use crate::provider::check_provider;
+use crate::remote::resolve_patterns;
+use crate::runtime;
 use std::path::Path;
 
 pub fn execute(config_path: &Path) -> Result<(), String> {
@@ -9,8 +12,13 @@ pub fn execute(config_path: &Path) -> Result<(), String> {
         ));
     }
 
-    let cfg = load_config(config_path)?;
-    let warnings = cfg.validate();
+    let mut cfg = load_config(config_path)?;
+    let mut warnings = cfg.validate();
+
+    resolve_patterns(&mut cfg, &runtime::data_dir());
+    for (name, p) in &cfg.providers {
+        warnings.extend(check_provider(name, p));
+    }
 
     let rule_count: usize = cfg.providers.values().map(|p| p.rules.len()).sum();
     let redirect_count: usize = cfg.providers.values().map(|p| p.redirections.len()).sum();

@@ -1,6 +1,6 @@
 use crate::config::ClinkConfig;
 use crate::mode::Mode;
-use crate::provider::{CompiledProvider, CompiledRules};
+use crate::provider::{CompiledProvider, CompiledRules, check_provider};
 use chrono::prelude::*;
 use linkify::{LinkFinder, LinkKind};
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
@@ -26,6 +26,12 @@ pub struct Clink {
 
 impl Clink {
     pub fn new(config: ClinkConfig) -> Self {
+        for (name, cfg) in &config.providers {
+            for warning in check_provider(name, cfg) {
+                eprintln!("clink: warning: {warning}");
+            }
+        }
+
         let global_rules = config
             .providers
             .get("global")
