@@ -10,7 +10,11 @@ pub fn execute(config_path: &Path, diff: bool, reset: bool) -> Result<(), String
     println!("Config path: {}", config_path.display());
 
     if diff {
-        let output = build_diff(config_path)?;
+        let pid = runtime::read_pid();
+        let is_running = pid.is_some_and(runtime::is_running);
+        let loaded_path = runtime::loaded_config_path();
+        let data_dir = runtime::data_dir();
+        let output = build_diff(config_path, &loaded_path, is_running, &data_dir)?;
         print!("{output}");
     }
 
@@ -21,11 +25,13 @@ pub fn execute(config_path: &Path, diff: bool, reset: bool) -> Result<(), String
     Ok(())
 }
 
-fn build_diff(config_path: &Path) -> Result<String, String> {
+fn build_diff(
+    config_path: &Path,
+    loaded_path: &Path,
+    is_running: bool,
+    data_dir: &Path,
+) -> Result<String, String> {
     let mut out = String::new();
-
-    let pid = runtime::read_pid();
-    let is_running = pid.is_some_and(runtime::is_running);
 
     if !is_running {
         writeln!(
@@ -36,7 +42,6 @@ fn build_diff(config_path: &Path) -> Result<String, String> {
         writeln!(out, "Start clink first, or the loaded config may be stale.").unwrap();
     }
 
-    let loaded_path = runtime::loaded_config_path();
     if !loaded_path.is_file() {
         writeln!(out, "\nNo loaded config state file found.").unwrap();
         writeln!(
@@ -48,7 +53,7 @@ fn build_diff(config_path: &Path) -> Result<String, String> {
     }
 
     let loaded: ClinkConfig = {
-        let content = std::fs::read_to_string(&loaded_path)
+        let content = std::fs::read_to_string(loaded_path)
             .map_err(|e| format!("Failed to read loaded config: {e}"))?;
         toml::from_str(&content).map_err(|e| format!("Failed to parse loaded config: {e}"))?
     };
@@ -64,7 +69,7 @@ fn build_diff(config_path: &Path) -> Result<String, String> {
     }
 
     let mut current = load_config(config_path)?;
-    resolve_patterns(&mut current, &runtime::data_dir());
+    resolve_patterns(&mut current, data_dir);
 
     let has_diff = diff_configs(&loaded, &current, &mut out);
 
@@ -220,10 +225,13 @@ mod tests {
         let cfg = ClinkConfig::default();
         confy::store_path(&tmp, &cfg).unwrap();
 
-        let output = build_diff(&tmp).unwrap();
-        assert!(
-            output.contains("No loaded config state file found") || output.contains("not running")
-        );
+        let loaded_path = std::env::temp_dir().join("clink_test_diff_loaded_does_not_exist.toml");
+        let _ = std::fs::remove_file(&loaded_path);
+        let data_dir = std::env::temp_dir();
+
+        let output = build_diff(&tmp, &loaded_path, false, &data_dir).unwrap();
+        assert!(output.contains("No loaded config state file found"));
+        assert!(output.contains("not running"));
 
         let _ = std::fs::remove_file(&tmp);
     }

@@ -146,14 +146,17 @@ impl Clink {
                 query
                     .map(|(key, value)| {
                         if self.is_tracked(&key, providers) {
-                            (
-                                key,
-                                swap_two_chars(
-                                    &value,
-                                    rng.random_range(0..value.len()),
-                                    rng.random_range(0..value.len()),
-                                ),
-                            )
+                            // char count, not byte length — multibyte values
+                            // would otherwise yield out-of-range indices into
+                            // the char vector; 0/1-char values can't swap.
+                            let char_count = value.chars().count();
+                            if char_count < 2 {
+                                (key, value)
+                            } else {
+                                let a = rng.random_range(0..char_count);
+                                let b = rng.random_range(0..char_count);
+                                (key, swap_two_chars(&value, a, b))
+                            }
                         } else {
                             (key, value)
                         }
@@ -417,6 +420,72 @@ mod find_and_replace {
     }
 
     #[test]
+    fn exception_protects_url_from_stripping() {
+        let mut providers = HashMap::new();
+        providers.insert(
+            "shop".to_string(),
+            crate::provider::ProviderConfig {
+                url_pattern: Some(r"^https?://shop\.example".into()),
+                rules: vec!["ref".into()],
+                redirections: vec![],
+                exceptions: vec![r"^https?://shop\.example/admin".into()],
+            },
+        );
+        let clink = Clink::new(ClinkConfig {
+            mode: Mode::Remove,
+            replace_to: "clink".to_string(),
+            sleep_duration: 150,
+            providers,
+            verbose: false,
+            remote: None,
+        });
+        assert_eq!(
+            clink
+                .find_and_replace("https://shop.example/admin?ref=keep")
+                .text,
+            "https://shop.example/admin?ref=keep",
+            "excepted URL must not have ref stripped"
+        );
+        assert_eq!(
+            clink
+                .find_and_replace("https://shop.example/item?ref=bye")
+                .text,
+            "https://shop.example/item",
+            "non-excepted URL must still have ref stripped"
+        );
+    }
+
+    #[test]
+    fn exception_blocks_redirect_unwrap() {
+        let mut providers = HashMap::new();
+        providers.insert(
+            "exitsc".to_string(),
+            crate::provider::ProviderConfig {
+                url_pattern: Some(r"^https?://exit\.sc".into()),
+                rules: vec![],
+                redirections: vec![r"url=([^&]+)".into()],
+                exceptions: vec![r"^https?://exit\.sc/admin".into()],
+            },
+        );
+        let clink = Clink::new(ClinkConfig {
+            mode: Mode::Remove,
+            replace_to: "clink".to_string(),
+            sleep_duration: 150,
+            providers,
+            verbose: false,
+            remote: None,
+        });
+        let excepted = "https://exit.sc/admin?url=https%3A%2F%2Fexample.com";
+        let result = clink.find_and_replace(excepted);
+        assert_eq!(result.exits_unwrapped, 0, "exception must block unwrap");
+        assert!(
+            !result.text.starts_with("https://example.com"),
+            "destination must not replace the excepted URL, got {}",
+            result.text
+        );
+    }
+
+    #[test]
     fn youtube_sanitize() {
         let clink = Clink::new(test_config(Mode::Remove));
 
@@ -492,6 +561,54 @@ mod find_and_replace {
                 .find_and_replace("https://foo.foo/?param[]=1&param[]=2&fbclid=abc")
                 .text,
             "https://foo.foo/?param[]=1&param[]=2"
+        );
+    }
+
+    #[test]
+    fn evil_empty_value_does_not_panic() {
+        let clink = Clink::new(test_config(Mode::Evil));
+        let out = clink
+            .find_and_replace("https://test.test/?fbclid=&keep=x")
+            .text;
+        let parsed = Url::parse(&out).unwrap();
+        let pairs: Vec<(String, String)> = parsed
+            .query_pairs()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        let fbclid = pairs
+            .iter()
+            .find(|(k, _)| k == "fbclid")
+            .expect("fbclid must survive");
+        assert_eq!(
+            fbclid.1, "",
+            "empty tracked value must stay empty, not panic"
+        );
+    }
+
+    #[test]
+    fn evil_single_char_value_does_not_panic() {
+        let clink = Clink::new(test_config(Mode::Evil));
+        let out = clink.find_and_replace("https://test.test/?fbclid=a").text;
+        let parsed = Url::parse(&out).unwrap();
+        let fbclid = parsed
+            .query_pairs()
+            .find(|(k, _)| k == "fbclid")
+            .expect("fbclid must survive");
+        assert_eq!(fbclid.1, "a", "single-char value must survive unchanged");
+    }
+
+    #[test]
+    fn evil_multibyte_value_does_not_panic() {
+        // Multibyte UTF-8: byte length > char count. Using byte length to index
+        // into a char vector would panic.
+        let clink = Clink::new(test_config(Mode::Evil));
+        let input = "https://test.test/?fbclid=%F0%9F%8E%89%F0%9F%8E%8A";
+        // Must not panic. We only care that the URL parses back out.
+        let out = clink.find_and_replace(input).text;
+        let parsed = Url::parse(&out).unwrap();
+        assert!(
+            parsed.query_pairs().any(|(k, _)| k == "fbclid"),
+            "fbclid must still be present"
         );
     }
 

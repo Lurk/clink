@@ -12,6 +12,8 @@ pub struct ProviderConfig {
     pub rules: Vec<String>,
     #[serde(default)]
     pub redirections: Vec<String>,
+    #[serde(default)]
+    pub exceptions: Vec<String>,
 }
 
 pub struct CompiledRules {
@@ -50,6 +52,7 @@ pub struct CompiledProvider {
     url_pattern: Regex,
     pub rules: CompiledRules,
     redirections: Vec<Regex>,
+    exceptions: Vec<Regex>,
 }
 
 pub fn check_provider(name: &str, config: &ProviderConfig) -> Vec<String> {
@@ -77,6 +80,13 @@ pub fn check_provider(name: &str, config: &ProviderConfig) -> Vec<String> {
             ));
         }
     }
+    for exc in &config.exceptions {
+        if let Err(e) = Regex::new(exc) {
+            warnings.push(format!(
+                "[providers.{name}] exception '{exc}' failed to compile: {e}"
+            ));
+        }
+    }
     warnings
 }
 
@@ -93,15 +103,22 @@ impl CompiledProvider {
             .filter_map(|r| Regex::new(r).ok())
             .collect();
 
+        let exceptions = config
+            .exceptions
+            .iter()
+            .filter_map(|r| Regex::new(r).ok())
+            .collect();
+
         Some(Self {
             url_pattern,
             rules,
             redirections,
+            exceptions,
         })
     }
 
     pub fn matches_url(&self, url: &str) -> bool {
-        self.url_pattern.is_match(url)
+        self.url_pattern.is_match(url) && !self.exceptions.iter().any(|re| re.is_match(url))
     }
 
     pub fn try_redirect(&self, url: &str) -> Option<String> {
@@ -134,6 +151,7 @@ mod tests {
                 url_pattern: Some(r"google\.com".to_string()),
                 rules: vec!["utm_source".to_string(), "fbclid".to_string()],
                 redirections: vec![],
+                exceptions: vec![],
             },
         );
 
@@ -153,6 +171,7 @@ mod tests {
             url_pattern: Some(r"exit\.sc".to_string()),
             rules: vec![],
             redirections: vec![r"url=([^&]+)".to_string()],
+            exceptions: vec![],
         };
 
         let mut providers = HashMap::new();
@@ -220,6 +239,7 @@ rules = ["fbclid", "gclid"]
             url_pattern: Some(r"youtube\.com|youtu\.be".to_string()),
             rules: vec!["si".to_string()],
             redirections: vec![],
+            exceptions: vec![],
         };
 
         let provider = CompiledProvider::new(&config).unwrap();
@@ -235,6 +255,7 @@ rules = ["fbclid", "gclid"]
             url_pattern: Some(r"exit\.sc".to_string()),
             rules: vec![],
             redirections: vec![r"url=([^&]+)".to_string()],
+            exceptions: vec![],
         };
 
         let provider = CompiledProvider::new(&config).unwrap();
@@ -251,6 +272,7 @@ rules = ["fbclid", "gclid"]
             url_pattern: Some(r"exit\.sc".to_string()),
             rules: vec![],
             redirections: vec![r"url=([^&]+)".to_string()],
+            exceptions: vec![],
         };
 
         let provider = CompiledProvider::new(&config).unwrap();
@@ -260,11 +282,43 @@ rules = ["fbclid", "gclid"]
     }
 
     #[test]
+    fn compiled_provider_respects_exceptions() {
+        let config = ProviderConfig {
+            url_pattern: Some(r"^https?://youtube\.com".into()),
+            rules: vec!["utm_source".into()],
+            redirections: vec![],
+            exceptions: vec![r"^https?://youtube\.com/redirect".into()],
+        };
+        let provider = CompiledProvider::new(&config).unwrap();
+        assert!(provider.matches_url("https://youtube.com/watch?v=abc"));
+        assert!(
+            !provider.matches_url("https://youtube.com/redirect?q=abc"),
+            "exception must exclude URL from provider match"
+        );
+    }
+
+    #[test]
+    fn compiled_provider_skips_redirect_when_excepted() {
+        let config = ProviderConfig {
+            url_pattern: Some(r"^https?://exit\.sc".into()),
+            rules: vec![],
+            redirections: vec![r"url=([^&]+)".into()],
+            exceptions: vec![r"^https?://exit\.sc/admin".into()],
+        };
+        let provider = CompiledProvider::new(&config).unwrap();
+        assert!(
+            !provider.matches_url("https://exit.sc/admin/?url=https%3A%2F%2Fbar.com"),
+            "excepted URL must not be treated as matching"
+        );
+    }
+
+    #[test]
     fn compiled_provider_returns_none_for_global() {
         let config = ProviderConfig {
             url_pattern: None,
             rules: vec!["fbclid".to_string()],
             redirections: vec![],
+            exceptions: vec![],
         };
 
         assert!(CompiledProvider::new(&config).is_none());
@@ -276,6 +330,7 @@ rules = ["fbclid", "gclid"]
             url_pattern: Some(r"^https?://example\.com".to_string()),
             rules: vec!["fbclid".to_string(), "^utm_".to_string()],
             redirections: vec![r"url=([^&]+)".to_string()],
+            exceptions: vec![],
         };
         assert!(check_provider("test", &config).is_empty());
     }
@@ -286,6 +341,7 @@ rules = ["fbclid", "gclid"]
             url_pattern: None,
             rules: vec!["fbclid".to_string()],
             redirections: vec![],
+            exceptions: vec![],
         };
         assert!(check_provider("global", &config).is_empty());
     }
@@ -339,6 +395,23 @@ rules = ["fbclid", "gclid"]
             "expected a single warning, got {warnings:?}"
         );
         assert!(warnings[0].contains("redirection"));
+        assert!(warnings[0].contains("[bad"));
+    }
+
+    #[test]
+    fn check_provider_flags_bad_exception() {
+        let config = ProviderConfig {
+            url_pattern: Some(r"^https?://x\.com".to_string()),
+            exceptions: vec!["[bad".to_string()],
+            ..Default::default()
+        };
+        let warnings = check_provider("scoped", &config);
+        assert_eq!(
+            warnings.len(),
+            1,
+            "expected a single warning, got {warnings:?}"
+        );
+        assert!(warnings[0].contains("exception"));
         assert!(warnings[0].contains("[bad"));
     }
 

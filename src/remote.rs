@@ -54,6 +54,9 @@ fn merge_patterns(config: &mut ClinkConfig, source: &RemotePatterns) {
                 local
                     .redirections
                     .extend(source_provider.redirections.iter().cloned());
+                local
+                    .exceptions
+                    .extend(source_provider.exceptions.iter().cloned());
                 if local.url_pattern.is_none() {
                     local.url_pattern.clone_from(&source_provider.url_pattern);
                 }
@@ -192,6 +195,59 @@ sleep_duration = 150
         assert!(
             cfg.providers.contains_key("remote_only"),
             "should have remote-only provider"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_resolve_merges_exceptions() {
+        let dir = std::env::temp_dir().join("clink_test_resolve_exceptions");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let mut remote_providers = HashMap::new();
+        remote_providers.insert(
+            "youtube".to_string(),
+            crate::provider::ProviderConfig {
+                url_pattern: Some(r"^https?://youtube\.com".into()),
+                rules: vec!["feature".into()],
+                exceptions: vec![r"^https?://youtube\.com/redirect".into()],
+                ..Default::default()
+            },
+        );
+        let remote = RemotePatterns {
+            providers: remote_providers,
+        };
+        std::fs::write(
+            dir.join("remote_patterns.toml"),
+            toml::to_string(&remote).unwrap(),
+        )
+        .unwrap();
+
+        let mut local_providers = HashMap::new();
+        local_providers.insert(
+            "youtube".to_string(),
+            crate::provider::ProviderConfig {
+                exceptions: vec![r"^https?://youtube\.com/embed".into()],
+                ..Default::default()
+            },
+        );
+        let mut cfg = ClinkConfig {
+            providers: local_providers,
+            ..ClinkConfig::default()
+        };
+
+        resolve_patterns(&mut cfg, &dir);
+
+        let youtube = &cfg.providers["youtube"];
+        assert!(
+            youtube.exceptions.iter().any(|e| e.contains("redirect")),
+            "remote exception must be present"
+        );
+        assert!(
+            youtube.exceptions.iter().any(|e| e.contains("embed")),
+            "local exception must be preserved"
         );
 
         let _ = std::fs::remove_dir_all(&dir);

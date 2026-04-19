@@ -25,7 +25,6 @@ struct ClearUrlsProvider {
     #[allow(dead_code)]
     raw_rules: Vec<String>,
     #[serde(default)]
-    #[allow(dead_code)]
     exceptions: Vec<String>,
     #[serde(default)]
     #[allow(dead_code)]
@@ -71,6 +70,7 @@ pub fn translate(json: &str) -> Result<TranslationResult, String> {
                 url_pattern,
                 rules,
                 redirections: cu_provider.redirections.clone(),
+                exceptions: cu_provider.exceptions.clone(),
             },
         );
     }
@@ -192,6 +192,28 @@ mod tests {
     fn invalid_json_returns_error() {
         let result = translate("not json");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn translates_exceptions() {
+        let json = r#"{
+            "providers": {
+                "youtube": {
+                    "urlPattern": "^https?://youtube\\.com",
+                    "completeProvider": false,
+                    "rules": ["feature"],
+                    "referralMarketing": [],
+                    "rawRules": [],
+                    "exceptions": ["^https?://youtube\\.com/redirect"],
+                    "redirections": [],
+                    "forceRedirection": false
+                }
+            }
+        }"#;
+        let result = translate(json).unwrap();
+        let provider = &result.providers["youtube"];
+        assert_eq!(provider.exceptions.len(), 1);
+        assert_eq!(provider.exceptions[0], r"^https?://youtube\.com/redirect");
     }
 
     #[test]

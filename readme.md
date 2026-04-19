@@ -147,6 +147,7 @@ The config is organized around providers. Each provider groups rules and redirec
 * `url_pattern` — a regex that the URL must match for this provider to apply. Omit it (as in `providers.global`) to match all URLs.
 * `rules` — an array of param names to strip from matching URLs.
 * `redirections` — an array of regexes used to unwrap redirect/exit URLs (see below).
+* `exceptions` — an array of regexes that exclude URLs from the provider. If a URL matches any exception, neither `rules` nor `redirections` fire for it.
 
 The `providers.global` provider has no `url_pattern`, so its rules apply to every URL. Domain-specific providers like `providers.youtube` or `providers.amazon` only fire when the URL matches their `url_pattern`.
 
