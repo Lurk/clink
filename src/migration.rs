@@ -9,7 +9,7 @@ fn domain_to_provider_name(domain: &str) -> String {
 
 fn domain_to_url_pattern(domain: &str) -> String {
     let escaped = regex::escape(domain);
-    format!(r"^https?://([a-z0-9-]+\.)*?{escaped}")
+    format!(r"^https?://([a-z0-9-]+\.)*?{escaped}(?:[/:?#]|$)")
 }
 
 pub fn migrate_params(params: &[String]) -> HashMap<String, ProviderConfig> {
@@ -197,5 +197,30 @@ mod tests {
         let exits: Vec<Vec<String>> = vec![vec![], vec!["only_url".into()]];
         let result = migrate_exits(&exits);
         assert!(result.is_empty());
+    }
+
+    #[test]
+    fn domain_to_url_pattern_anchors_host_end() {
+        let result = migrate_params(&["youtube.com``si".into()]);
+        let pattern = result["youtube_com"].url_pattern.as_ref().unwrap();
+        let re = Regex::new(pattern).unwrap();
+
+        // Legitimate hosts must match.
+        assert!(re.is_match("https://youtube.com/watch?v=abc"));
+        assert!(re.is_match("https://www.youtube.com/watch?v=abc"));
+        assert!(re.is_match("https://music.youtube.com/watch?v=abc"));
+        assert!(re.is_match("https://youtube.com:8080/watch"));
+        assert!(re.is_match("https://youtube.com?si=foo"));
+        assert!(re.is_match("https://youtube.com"));
+
+        // Look-alike hosts must NOT match — this is the host-end-anchor bug.
+        assert!(
+            !re.is_match("https://youtube.com.attacker.com/?si=foo"),
+            "pattern over-matches youtube.com.attacker.com — host-end anchor missing"
+        );
+        assert!(
+            !re.is_match("https://youtube.commerce.com/?si=foo"),
+            "pattern over-matches youtube.commerce.com — host-end anchor missing"
+        );
     }
 }

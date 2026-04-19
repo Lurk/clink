@@ -572,6 +572,28 @@ mod find_and_replace {
     }
 
     #[test]
+    fn lookalike_domains_do_not_match_shipped_providers() {
+        // Shipped patterns in default_config.toml must require a host-end
+        // boundary; otherwise `amazon.com.attacker.com/?sp_csd=...` would
+        // get its tracking param stripped, mangling the URL the user pasted.
+        let clink = Clink::new(test_config(Mode::Remove));
+
+        let amazon_lookalike = "https://amazon.com.attacker.com/?sp_csd=secret&keep=me";
+        let amazon_result = clink.find_and_replace(amazon_lookalike);
+        assert_eq!(
+            amazon_result.params_removed, 0,
+            "amazon's url_pattern must not match lookalike host"
+        );
+
+        let exit_lookalike = "https://exit.sc.attacker.com/?url=https%3A%2F%2Fexample.com";
+        let exit_result = clink.find_and_replace(exit_lookalike);
+        assert_eq!(
+            exit_result.exits_unwrapped, 0,
+            "exit.sc's url_pattern must not match lookalike host"
+        );
+    }
+
+    #[test]
     fn clink_extras_survive_cache_without_them() {
         // After `clink update` the cache contains only the translated remote
         // (e.g. ClearURLs), which doesn't have niche redirectors like exit.sc
