@@ -39,12 +39,16 @@ mod tests {
         assert!(content.contains("mode"));
         assert!(content.contains("sleep_duration"));
         assert!(
-            content.contains("[providers]"),
-            "template should contain providers section"
+            content.contains("[providers."),
+            "template should contain at least one provider"
         );
         assert!(
             !content.contains("[providers.global]"),
-            "template should no longer bake in global provider rules"
+            "template should not bake in global provider rules — those come from the builtin snapshot"
+        );
+        assert!(
+            content.contains("[providers.exitsc]"),
+            "template should ship the exit.sc redirector default"
         );
         assert!(
             content.contains("[remote]"),
@@ -95,8 +99,12 @@ mod tests {
         execute(&config_path).unwrap();
 
         let mut cfg = crate::config::load_config(&config_path).unwrap();
-        // Templated config has no providers; cache dir is empty here.
-        assert!(cfg.providers.is_empty());
+        // Templated config now ships clink-curated providers (exit.sc, amazon, ...).
+        // The builtin fallback still supplies tracking rules like fbclid.
+        assert!(
+            cfg.providers.contains_key("exitsc"),
+            "templated config should include the exit.sc redirector default"
+        );
         crate::remote::resolve_patterns(&mut cfg, &dir);
 
         let has_fbclid = cfg

@@ -553,6 +553,48 @@ mod find_and_replace {
         assert_eq!(result.urls_cleaned, 2);
         assert_eq!(result.params_removed, 3);
     }
+
+    #[test]
+    fn clink_extras_survive_cache_without_them() {
+        // After `clink update` the cache contains only the translated remote
+        // (e.g. ClearURLs), which doesn't have niche redirectors like exit.sc
+        // or clink-curated extras like the explicit Amazon rules.
+        // Those entries live in the user's config template, so they must
+        // still apply even when the cache replaces the builtin layer.
+        let id = std::thread::current().id();
+        let cfg_path = std::env::temp_dir().join(format!("clink_test_extras_cfg_{id:?}.toml"));
+        let cache_dir = std::env::temp_dir().join(format!("clink_test_extras_cache_{id:?}"));
+        let _ = std::fs::remove_dir_all(&cache_dir);
+        std::fs::create_dir_all(&cache_dir).unwrap();
+
+        let template = include_str!("default_config.toml");
+        std::fs::write(&cfg_path, template).unwrap();
+
+        let cache_toml = "[providers.global]\nrules = [\"fbclid\", \"gclid\"]\n";
+        std::fs::write(cache_dir.join("remote_patterns.toml"), cache_toml).unwrap();
+
+        let mut cfg = crate::config::load_config(&cfg_path).unwrap();
+        crate::remote::resolve_patterns(&mut cfg, &cache_dir);
+        let clink = Clink::new(cfg);
+
+        assert_eq!(
+            clink
+                .find_and_replace("https://exit.sc/?url=https%3A%2F%2Fexample.com")
+                .text,
+            "https://example.com/",
+            "exit.sc redirect must still unwrap when cache lacks it"
+        );
+        assert_eq!(
+            clink
+                .find_and_replace("https://www.amazon.com/dp/X?sp_csd=abc&keep=me")
+                .text,
+            "https://www.amazon.com/dp/X?keep=me",
+            "amazon sp_csd must still strip when cache lacks it"
+        );
+
+        let _ = std::fs::remove_file(&cfg_path);
+        let _ = std::fs::remove_dir_all(&cache_dir);
+    }
 }
 
 #[cfg(test)]

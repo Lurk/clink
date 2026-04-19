@@ -14,16 +14,47 @@ replace_to = 'clink'
 # How often clink checks the clipboard, in milliseconds
 sleep_duration = 150
 
-# Built-in tracking rules ship with clink (sourced from ClearURLs, LGPL-3.0).
-# Run `clink update` to replace them with the latest version from the remote.
-# Add your own custom rules below — they are merged on top of built-ins.
-[providers]
+# Built-in tracking rules ship with clink (sourced from ClearURLs, LGPL-3.0)
+# and are embedded in the binary. Run `clink update` to fetch the latest.
+#
+# The providers below ship as defaults — they cover redirectors and rules
+# that the ClearURLs snapshot doesn't. Edit, remove, or add your own.
 
-# Example — uncomment and edit:
-# [providers.example]
-# url_pattern = '^https?://example\.com'
-# rules = ['my_tracker']
-# redirections = ['^https?://example\.com/out\?.*?u=([^&]+)']
+[providers.google]
+url_pattern = '^https?://([a-z0-9-]+\.)*?google\.[a-z]{2,}'
+redirections = ['^https?://[a-z0-9.-]*google\.[a-z.]+/url\?.*?(?:url|q)=([^&]+)']
+
+[providers.facebook_lphp]
+url_pattern = '^https?://([a-z0-9-]+\.)*?facebook\.com'
+redirections = ['^https?://[a-z0-9.-]*facebook\.com/(?:l|confirmemail|login)\.php\?.*?(?:u|next)=([^&]+)']
+
+[providers.instagram_l]
+url_pattern = '^https?://l\.instagram\.com'
+redirections = ['^https?://l\.instagram\.com/\?.*?u=([^&]+)']
+
+[providers.exitsc]
+url_pattern = '^https?://exit\.sc'
+redirections = ['^https?://exit\.sc/\?.*?url=([^&]+)']
+
+[providers.bing_cka]
+url_pattern = '^https?://([a-z0-9-]+\.)*?bing\.com/ck/a'
+redirections = ['^https?://bing\.com/ck/a\?.*?u=([^&]+)']
+
+[providers.youtube_redirect]
+url_pattern = '^https?://([a-z0-9-]+\.)*?youtube\.com/redirect'
+redirections = ['^https?://[a-z0-9.-]*youtube\.com/redirect\?.*?q=([^&]+)']
+
+[providers.linkedin_authwall]
+url_pattern = '^https?://([a-z0-9-]+\.)*?linkedin\.com/authwall'
+redirections = ['^https?://[a-z0-9.-]*linkedin\.com/authwall\?.*?sessionRedirect=([^&]+)']
+
+[providers.mora]
+url_pattern = '^https?://mora\.jp'
+redirections = ['^https?://mora\.jp/cart\?.*?returnUrl=([^&]+)']
+
+[providers.amazon]
+url_pattern = '^https?://([a-z0-9-]+\.)*?amazon\.(com|de|co\.uk|co\.jp|fr|it|es|ca|com\.au|com\.br|com\.mx|nl|pl|se|sg|in|com\.be|com\.tr|eg|sa|ae)'
+rules = ['sp_csd', 'pd_rd_w', 'pd_rd_wg', 'pd_rd_i', 'pd_rd_r', 'pf_rd_r', 'pf_rd_p', 't', 'psc', 'content-id']
 
 # Fetch providers from a remote URL.
 # Supported formats:
