@@ -201,6 +201,14 @@ whenever you want to pull the latest version. Then `clink reload` to apply.
 
 To disable remote patterns, remove the `[remote]` section from the config.
 
+### Lookalike-host caveat
+
+ClearURLs ships host patterns shaped like `^https?://(?:[a-z0-9-]+\.)*?change\.org`, which don't anchor the end of the host. A URL such as `https://change.org.attacker.com/?source_location=x` therefore matches the `change.org` provider, and clink will strip `source_location` before pasting.
+
+This is a clipboard mangling, not a leak: nothing is sent anywhere, and the URL still resolves to `attacker.com` — just with one fewer query param. clink-curated providers in the default config (`amazon`, `exit.sc`, ...) anchor host end with `(?:[/:?#]|$)` and aren't affected; the issue is specific to the imported ClearURLs snapshot.
+
+If you hit a case that bothers you, send a PR to [ClearURLs/Rules](https://github.com/ClearURLs/Rules) tightening the offending `urlPattern`; running `clink update` will pick it up.
+
 ## Build
 
 ### Linux
