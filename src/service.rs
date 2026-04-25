@@ -211,6 +211,19 @@ WantedBy=default.target
     }
 }
 
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+mod platform {
+    use std::path::Path;
+
+    pub fn install(_binary_path: &Path, _config_path: &Path) -> Result<(), String> {
+        Err("Service install is not supported on this platform.".to_string())
+    }
+
+    pub fn uninstall() -> Result<(), String> {
+        Err("Service uninstall is not supported on this platform.".to_string())
+    }
+}
+
 pub fn install(binary_path: &Path, config_path: &Path) -> Result<(), String> {
     platform::install(binary_path, config_path)
 }

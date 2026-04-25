@@ -4,6 +4,7 @@ use crate::runtime;
 use crate::stats;
 use copypasta::{ClipboardContext, ClipboardProvider};
 use std::path::Path;
+#[cfg(unix)]
 use std::sync::atomic::Ordering;
 use std::{thread, time::Duration};
 
@@ -78,6 +79,7 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
     }
 
     let sleep_duration = Duration::from_millis(cfg.sleep_duration);
+    #[cfg_attr(not(unix), allow(unused_mut))]
     let mut clink = Clink::new(cfg);
     let mut ctx: ClipboardContext =
         ClipboardContext::new().map_err(|e| format!("Failed to access clipboard: {e}"))?;
