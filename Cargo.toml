@@ -21,7 +21,7 @@ chrono = "=0.4.44"
 dirs-next = "=2.0.0"
 toml = "1.1.2"
 ureq = "3"
-regex = "1"
+regex = "1.12.3"
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "=0.31.2", features = ["signal", "process"] }
