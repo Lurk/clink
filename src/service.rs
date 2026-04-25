@@ -100,7 +100,6 @@ mod platform {
 
 #[cfg(target_os = "linux")]
 mod platform {
-    use crate::runtime;
     use std::fs;
     use std::path::{Path, PathBuf};
     use std::process::Command;
@@ -116,7 +115,7 @@ mod platform {
         let config_arg = config_path.display();
 
         format!(
-            r#"[Unit]
+            r"[Unit]
 Description=Clean links copied to clipboard
 Documentation=https://github.com/Lurk/clink?tab=readme-ov-file#readme
 
@@ -145,7 +144,7 @@ RestrictRealtime=yes
 
 [Install]
 WantedBy=default.target
-"#
+"
         )
     }
 
