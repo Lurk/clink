@@ -15,7 +15,7 @@ pub fn execute(config_path: &Path) -> Result<(), String> {
     let mut cfg = load_config(config_path)?;
     let mut warnings = cfg.validate();
 
-    resolve_patterns(&mut cfg, &runtime::data_dir());
+    warnings.extend(resolve_patterns(&mut cfg, &runtime::data_dir()));
     for (name, p) in &cfg.providers {
         warnings.extend(check_provider(name, p));
     }

@@ -24,12 +24,34 @@ pub struct RemotePatterns {
     pub providers: HashMap<String, crate::provider::ProviderConfig>,
 }
 
-pub fn resolve_patterns(config: &mut ClinkConfig, data_dir: &Path) {
+pub fn resolve_patterns(config: &mut ClinkConfig, data_dir: &Path) -> Vec<String> {
     let cache_path = data_dir.join("remote_patterns.toml");
+    let mut warnings = Vec::new();
 
-    let cache = std::fs::read_to_string(&cache_path)
-        .ok()
-        .and_then(|content| toml::from_str::<RemotePatterns>(&content).ok());
+    // Distinguish "no cache" (normal first-run state) from "cache present but
+    // unreadable/unparseable" — the second case means `clink update` produced
+    // a bad file or someone hand-edited the cache, and silently falling back
+    // to the builtin would leave the user thinking they have fresh rules.
+    let cache = match std::fs::read_to_string(&cache_path) {
+        Ok(content) => match toml::from_str::<RemotePatterns>(&content) {
+            Ok(parsed) => Some(parsed),
+            Err(e) => {
+                warnings.push(format!(
+                    "failed to parse remote pattern cache at {}: {e} — falling back to built-in patterns; re-run `clink update`",
+                    cache_path.display()
+                ));
+                None
+            }
+        },
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+        Err(e) => {
+            warnings.push(format!(
+                "failed to read remote pattern cache at {}: {e} — falling back to built-in patterns",
+                cache_path.display()
+            ));
+            None
+        }
+    };
 
     if let Some(remote) = cache {
         if config.verbose {
@@ -42,6 +64,8 @@ pub fn resolve_patterns(config: &mut ClinkConfig, data_dir: &Path) {
         }
         merge_patterns(config, crate::builtin::patterns());
     }
+
+    warnings
 }
 
 fn merge_patterns(config: &mut ClinkConfig, source: &RemotePatterns) {
@@ -272,6 +296,55 @@ sleep_duration = 150
         assert!(
             has_fbclid,
             "resolve_patterns without cache must fall back to builtin and populate fbclid"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_resolve_returns_warning_on_corrupt_cache() {
+        let dir = std::env::temp_dir().join("clink_test_resolve_corrupt_cache");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let cache_path = dir.join("remote_patterns.toml");
+        std::fs::write(&cache_path, "this is not valid [[[ toml").unwrap();
+
+        let mut cfg = ClinkConfig::default();
+        let warnings = resolve_patterns(&mut cfg, &dir);
+
+        assert!(
+            warnings
+                .iter()
+                .any(|w| w.contains("remote_patterns.toml") && w.contains("parse")),
+            "corrupt cache must surface a parse warning naming the cache file, got {warnings:?}"
+        );
+
+        // Falls back to builtin so the daemon still has rules.
+        let has_fbclid = cfg
+            .providers
+            .values()
+            .any(|p| p.rules.iter().any(|r| r.contains("fbclid")));
+        assert!(
+            has_fbclid,
+            "corrupt cache must still fall back to builtin patterns"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_resolve_silent_when_cache_absent() {
+        let dir = std::env::temp_dir().join("clink_test_resolve_silent_no_cache");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let mut cfg = ClinkConfig::default();
+        let warnings = resolve_patterns(&mut cfg, &dir);
+
+        assert!(
+            warnings.is_empty(),
+            "absent cache is the normal first-run state and must not warn, got {warnings:?}"
         );
 
         let _ = std::fs::remove_dir_all(&dir);

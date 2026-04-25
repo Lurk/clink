@@ -7,6 +7,13 @@ use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::{thread, time::Duration};
 
+fn validation_log_lines(cfg: &ClinkConfig) -> Vec<String> {
+    cfg.validate()
+        .into_iter()
+        .map(|w| format!("config warning: {w}"))
+        .collect()
+}
+
 fn log(verbose: bool, msg: &str) {
     let stamped = format!(
         "[{}] {msg}",
@@ -46,10 +53,16 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
     let mut cfg: ClinkConfig = load_config(config_path)?;
     cfg.verbose = verbose;
 
-    crate::remote::resolve_patterns(&mut cfg, &runtime::data_dir());
+    for w in crate::remote::resolve_patterns(&mut cfg, &runtime::data_dir()) {
+        log_err(&w);
+    }
 
     if let Err(e) = runtime::write_loaded_config(&cfg) {
         log_err(&format!("Failed to write loaded config: {e}"));
+    }
+
+    for line in validation_log_lines(&cfg) {
+        log_err(&line);
     }
 
     if verbose {
@@ -86,9 +99,15 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
                 match load_config(config_path) {
                     Ok(mut new_cfg) => {
                         new_cfg.verbose = verbose;
-                        crate::remote::resolve_patterns(&mut new_cfg, &runtime::data_dir());
+                        for w in crate::remote::resolve_patterns(&mut new_cfg, &runtime::data_dir())
+                        {
+                            log_err(&w);
+                        }
                         if let Err(e) = runtime::write_loaded_config(&new_cfg) {
                             log_err(&format!("Failed to write loaded config: {e}"));
+                        }
+                        for line in validation_log_lines(&new_cfg) {
+                            log_err(&line);
                         }
                         clink = Clink::new(new_cfg);
                         log(verbose, "Config reloaded successfully");
@@ -124,5 +143,36 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
             }
         }
         thread::sleep(sleep_duration);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validation_log_lines_flags_zero_sleep_duration() {
+        let cfg = ClinkConfig {
+            sleep_duration: 0,
+            ..ClinkConfig::default()
+        };
+        let lines = validation_log_lines(&cfg);
+        assert!(
+            lines.iter().any(|l| l.contains("sleep_duration")),
+            "sleep_duration=0 must surface as a warning, got {lines:?}"
+        );
+        assert!(
+            lines.iter().all(|l| l.starts_with("config warning:")),
+            "every line must be tagged as a config warning, got {lines:?}"
+        );
+    }
+
+    #[test]
+    fn validation_log_lines_empty_for_default_config() {
+        let lines = validation_log_lines(&ClinkConfig::default());
+        assert!(
+            lines.is_empty(),
+            "default config must not produce warnings, got {lines:?}"
+        );
     }
 }

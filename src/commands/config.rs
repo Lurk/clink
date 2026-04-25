@@ -69,7 +69,9 @@ fn build_diff(
     }
 
     let mut current = load_config(config_path)?;
-    resolve_patterns(&mut current, data_dir);
+    for w in resolve_patterns(&mut current, data_dir) {
+        writeln!(out, "\nWarning: {w}").unwrap();
+    }
 
     let has_diff = diff_configs(&loaded, &current, &mut out);
 

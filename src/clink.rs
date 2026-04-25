@@ -66,16 +66,15 @@ impl Clink {
         let mut exits_unwrapped: u32 = 0;
 
         for link in self.finder.links(input) {
-            let (unwrapped, was_exit) = self.try_unwrap_redirect(link.as_str());
+            let (mut l, was_exit) = self.parse_link(link.as_str());
             if was_exit {
                 exits_unwrapped += 1;
             }
-            let mut l = Url::parse(unwrapped.as_str()).expect("url to be parsable");
             let normalized_original = l.to_string();
             #[allow(clippy::cast_possible_truncation)]
             let original_param_count = l.query_pairs().count() as u32;
 
-            let matching_providers = self.find_matching_providers(unwrapped.as_str());
+            let matching_providers = self.find_matching_providers(l.as_str());
 
             let query = self.process_query(
                 l.query_pairs().map(|(k, v)| (k.to_string(), v.to_string())),
@@ -205,6 +204,22 @@ impl Clink {
             }
         }
         (url.to_string(), false)
+    }
+
+    // Redirect captures (e.g. exit.sc's `url=...` value) aren't guaranteed to
+    // be valid URLs once decoded — junk values would otherwise crash the
+    // daemon. Fall back to the original linkify-found link in that case.
+    fn parse_link(&self, link: &str) -> (Url, bool) {
+        let (unwrapped, was_exit) = self.try_unwrap_redirect(link);
+        if was_exit {
+            if let Ok(parsed) = Url::parse(&unwrapped) {
+                return (parsed, true);
+            }
+        }
+        (
+            Url::parse(link).expect("linkify-found URL to be parsable"),
+            false,
+        )
     }
 }
 
@@ -634,6 +649,24 @@ mod find_and_replace {
         let clink = Clink::new(test_config(Mode::Remove));
         let result = clink.find_and_replace("https://exit.sc/?url=https%3A%2F%2Fexample.com");
         assert_eq!(result.exits_unwrapped, 1);
+    }
+
+    // Regex-captured redirect destinations aren't guaranteed to be valid URLs.
+    // A link like `https://exit.sc/?url=not_a_url` would otherwise crash the
+    // daemon — and the daemon restart loop would re-read the same clipboard.
+    #[test]
+    fn redirect_unwrap_unparseable_destination_does_not_panic() {
+        let clink = Clink::new(test_config(Mode::Remove));
+        let input = "https://exit.sc/?url=not_a_url";
+        let result = clink.find_and_replace(input);
+        assert_eq!(
+            result.text, input,
+            "unparseable redirect destination must leave the original link untouched"
+        );
+        assert_eq!(
+            result.exits_unwrapped, 0,
+            "a failed unwrap must not be counted as a successful exit"
+        );
     }
 
     #[test]
