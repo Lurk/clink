@@ -16,6 +16,29 @@ pub struct ProviderConfig {
     pub exceptions: Vec<String>,
 }
 
+impl ProviderConfig {
+    // Merge another provider into this one, preserving local precedence for
+    // url_pattern (only fills it when absent locally) and deduplicating rules,
+    // redirections, and exceptions so a shared entry between local and remote
+    // doesn't bloat the compiled provider's regex/literal sets.
+    pub fn merge_from(&mut self, other: &Self) {
+        extend_unique(&mut self.rules, &other.rules);
+        extend_unique(&mut self.redirections, &other.redirections);
+        extend_unique(&mut self.exceptions, &other.exceptions);
+        if self.url_pattern.is_none() {
+            self.url_pattern.clone_from(&other.url_pattern);
+        }
+    }
+}
+
+fn extend_unique(target: &mut Vec<String>, source: &[String]) {
+    for s in source {
+        if !target.contains(s) {
+            target.push(s.clone());
+        }
+    }
+}
+
 pub struct CompiledRules {
     literals: HashSet<String>,
     patterns: Vec<Regex>,

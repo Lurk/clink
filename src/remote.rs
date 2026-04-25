@@ -73,18 +73,7 @@ fn merge_patterns(config: &mut ClinkConfig, source: &RemotePatterns) {
         config
             .providers
             .entry(name.clone())
-            .and_modify(|local| {
-                local.rules.extend(source_provider.rules.iter().cloned());
-                local
-                    .redirections
-                    .extend(source_provider.redirections.iter().cloned());
-                local
-                    .exceptions
-                    .extend(source_provider.exceptions.iter().cloned());
-                if local.url_pattern.is_none() {
-                    local.url_pattern.clone_from(&source_provider.url_pattern);
-                }
-            })
+            .and_modify(|local| local.merge_from(source_provider))
             .or_insert_with(|| source_provider.clone());
     }
 }
@@ -345,6 +334,163 @@ sleep_duration = 150
         assert!(
             warnings.is_empty(),
             "absent cache is the normal first-run state and must not warn, got {warnings:?}"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_resolve_dedupes_overlapping_rules() {
+        let dir = std::env::temp_dir().join("clink_test_resolve_dedupes_rules");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let mut remote_providers = HashMap::new();
+        remote_providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["shared".into(), "remote_only".into()],
+                ..Default::default()
+            },
+        );
+        let remote = RemotePatterns {
+            providers: remote_providers,
+        };
+        std::fs::write(
+            dir.join("remote_patterns.toml"),
+            toml::to_string(&remote).unwrap(),
+        )
+        .unwrap();
+
+        let mut local_providers = HashMap::new();
+        local_providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["shared".into(), "local_only".into()],
+                ..Default::default()
+            },
+        );
+        let mut cfg = ClinkConfig {
+            providers: local_providers,
+            ..ClinkConfig::default()
+        };
+
+        resolve_patterns(&mut cfg, &dir);
+
+        let count = cfg.providers["global"]
+            .rules
+            .iter()
+            .filter(|r| r.as_str() == "shared")
+            .count();
+        assert_eq!(count, 1, "shared rule must appear exactly once after merge");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_resolve_dedupes_overlapping_redirections() {
+        let dir = std::env::temp_dir().join("clink_test_resolve_dedupes_redirections");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let shared_redir = r"^https?://exit\.sc/\?.*?url=([^&]+)".to_string();
+
+        let mut remote_providers = HashMap::new();
+        remote_providers.insert(
+            "exitsc".to_string(),
+            crate::provider::ProviderConfig {
+                url_pattern: Some(r"^https?://exit\.sc".into()),
+                redirections: vec![shared_redir.clone()],
+                ..Default::default()
+            },
+        );
+        let remote = RemotePatterns {
+            providers: remote_providers,
+        };
+        std::fs::write(
+            dir.join("remote_patterns.toml"),
+            toml::to_string(&remote).unwrap(),
+        )
+        .unwrap();
+
+        let mut local_providers = HashMap::new();
+        local_providers.insert(
+            "exitsc".to_string(),
+            crate::provider::ProviderConfig {
+                url_pattern: Some(r"^https?://exit\.sc".into()),
+                redirections: vec![shared_redir.clone()],
+                ..Default::default()
+            },
+        );
+        let mut cfg = ClinkConfig {
+            providers: local_providers,
+            ..ClinkConfig::default()
+        };
+
+        resolve_patterns(&mut cfg, &dir);
+
+        let count = cfg.providers["exitsc"]
+            .redirections
+            .iter()
+            .filter(|r| **r == shared_redir)
+            .count();
+        assert_eq!(
+            count, 1,
+            "shared redirection must appear exactly once after merge"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_resolve_dedupes_overlapping_exceptions() {
+        let dir = std::env::temp_dir().join("clink_test_resolve_dedupes_exceptions");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let shared_exc = r"^https?://youtube\.com/redirect".to_string();
+
+        let mut remote_providers = HashMap::new();
+        remote_providers.insert(
+            "youtube".to_string(),
+            crate::provider::ProviderConfig {
+                url_pattern: Some(r"^https?://youtube\.com".into()),
+                exceptions: vec![shared_exc.clone()],
+                ..Default::default()
+            },
+        );
+        let remote = RemotePatterns {
+            providers: remote_providers,
+        };
+        std::fs::write(
+            dir.join("remote_patterns.toml"),
+            toml::to_string(&remote).unwrap(),
+        )
+        .unwrap();
+
+        let mut local_providers = HashMap::new();
+        local_providers.insert(
+            "youtube".to_string(),
+            crate::provider::ProviderConfig {
+                exceptions: vec![shared_exc.clone()],
+                ..Default::default()
+            },
+        );
+        let mut cfg = ClinkConfig {
+            providers: local_providers,
+            ..ClinkConfig::default()
+        };
+
+        resolve_patterns(&mut cfg, &dir);
+
+        let count = cfg.providers["youtube"]
+            .exceptions
+            .iter()
+            .filter(|e| **e == shared_exc)
+            .count();
+        assert_eq!(
+            count, 1,
+            "shared exception must appear exactly once after merge"
         );
 
         let _ = std::fs::remove_dir_all(&dir);

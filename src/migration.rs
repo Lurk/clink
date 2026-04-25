@@ -34,7 +34,9 @@ pub fn migrate_params(params: &[String]) -> HashMap<String, ProviderConfig> {
             }
         } else {
             let global = providers.entry("global".to_string()).or_default();
-            global.rules.push(param.clone());
+            if !global.rules.contains(param) {
+                global.rules.push(param.clone());
+            }
         }
     }
 
@@ -93,6 +95,19 @@ mod tests {
         let global = &result["global"];
         assert!(global.url_pattern.is_none());
         assert_eq!(global.rules, vec!["fbclid", "gclid"]);
+    }
+
+    #[test]
+    fn migrate_global_params_deduplicates() {
+        let params = vec!["fbclid".into(), "gclid".into(), "fbclid".into()];
+        let result = migrate_params(&params);
+
+        let global = &result["global"];
+        assert_eq!(
+            global.rules,
+            vec!["fbclid", "gclid"],
+            "duplicate global params must collapse to a single entry"
+        );
     }
 
     #[test]
