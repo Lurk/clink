@@ -111,6 +111,7 @@ pub fn write_loaded_config(config: &crate::config::ClinkConfig) -> Result<(), St
     Ok(())
 }
 
+#[cfg(unix)]
 pub fn remove_loaded_config() {
     let _ = fs::remove_file(loaded_config_path());
 }
