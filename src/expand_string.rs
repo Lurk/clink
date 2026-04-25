@@ -46,12 +46,18 @@
 /// ]
 /// ```
 ///
+// Cap the cross-product expansion. Legitimate legacy patterns expand to a
+// handful of strings (the largest in real configs is ~16 — see the doctest).
+// 1024 leaves several orders of magnitude of headroom while preventing a
+// pathological pattern like `(a|b)` repeated many times from blowing memory.
+const MAX_EXPANSIONS: usize = 1024;
+
 /// # Examples
 ///
 /// ```
 /// use crate::expand_string::expand_string;
 /// assert_eq!(
-///     expand_string("(a.|)foo.(bar|baz.(qux|wux)|sar)(.b|.c)"),
+///     expand_string("(a.|)foo.(bar|baz.(qux|wux)|sar)(.b|.c)").unwrap(),
 ///     vec![
 ///         "a.foo.bar.b",
 ///         "a.foo.bar.c",
@@ -72,7 +78,7 @@
 ///     ]
 /// );
 /// ```
-pub fn expand_string(input: &str) -> Vec<String> {
+pub fn expand_string(input: &str) -> Result<Vec<String>, String> {
     let mut expander: Expander = Expander::new();
     let mut accumulator: String = String::new();
     let mut just_closed: bool = false;
@@ -89,7 +95,7 @@ pub fn expand_string(input: &str) -> Vec<String> {
                 just_closed = true;
                 expander.push(accumulator.clone());
                 accumulator.clear();
-                expander.close_group();
+                expander.close_group()?;
             }
             '|' => {
                 if !just_closed {
@@ -107,7 +113,10 @@ pub fn expand_string(input: &str) -> Vec<String> {
     if !accumulator.is_empty() {
         expander.push(accumulator);
     }
-    expander.stack.pop().unwrap()
+    expander
+        .stack
+        .pop()
+        .ok_or_else(|| "expansion produced empty result".to_string())
 }
 
 #[derive(Debug)]
@@ -134,7 +143,7 @@ impl Expander {
         }
     }
 
-    fn close_group(&mut self) {
+    fn close_group(&mut self) -> Result<(), String> {
         if let (Some(group), Some(mut parent_group)) = (self.group.take(), self.stack.pop()) {
             if self.stack.is_empty() {
                 let mut permutations: Vec<String> = vec![];
@@ -146,6 +155,11 @@ impl Expander {
                             parent_item.as_str(),
                             group_item.as_str()
                         ));
+                        if permutations.len() > MAX_EXPANSIONS {
+                            return Err(format!(
+                                "expansion exceeded cap of {MAX_EXPANSIONS} strings"
+                            ));
+                        }
                     }
                 }
                 self.stack.push(permutations);
@@ -154,10 +168,16 @@ impl Expander {
                 let parent_item = parent_group.pop().unwrap();
                 for group_item in &group {
                     parent_group.push(format!("{}{}", parent_item.as_str(), group_item.as_str()));
+                    if parent_group.len() > MAX_EXPANSIONS {
+                        return Err(format!(
+                            "expansion exceeded cap of {MAX_EXPANSIONS} strings"
+                        ));
+                    }
                 }
                 self.group = Some(parent_group);
             }
         }
+        Ok(())
     }
 
     fn open_group(&mut self) {
@@ -174,18 +194,21 @@ mod expand_url {
 
     #[test]
     fn no_groups() {
-        assert_eq!(expand_string("foo"), vec!["foo"]);
+        assert_eq!(expand_string("foo").unwrap(), vec!["foo"]);
     }
 
     #[test]
     fn one_group() {
-        assert_eq!(expand_string("foo.(bar|baz)"), vec!["foo.bar", "foo.baz"]);
+        assert_eq!(
+            expand_string("foo.(bar|baz)").unwrap(),
+            vec!["foo.bar", "foo.baz"]
+        );
     }
 
     #[test]
     fn nested_groups() {
         assert_eq!(
-            expand_string("foo.(bar|baz.(qux|wux)|sar)"),
+            expand_string("foo.(bar|baz.(qux|wux)|sar)").unwrap(),
             vec!["foo.bar", "foo.baz.qux", "foo.baz.wux", "foo.sar"]
         );
     }
@@ -193,7 +216,7 @@ mod expand_url {
     #[test]
     fn start_group() {
         assert_eq!(
-            expand_string("(a.|)foo.(bar|baz.(qux|wux)|sar)(.b|.c)"),
+            expand_string("(a.|)foo.(bar|baz.(qux|wux)|sar)(.b|.c)").unwrap(),
             vec![
                 "a.foo.bar.b",
                 "a.foo.bar.c",
@@ -218,8 +241,22 @@ mod expand_url {
     #[test]
     fn empty_node() {
         assert_eq!(
-            expand_string("foo(|.bar|.baz)"),
+            expand_string("foo(|.bar|.baz)").unwrap(),
             vec!["foo", "foo.bar", "foo.baz"]
+        );
+    }
+
+    // 11 nested 2-way alternations → 2^11 = 2048 strings, well past the cap.
+    // expand_string runs on user-supplied legacy config values, so a typo or a
+    // copy-pasted ClearURLs-style regex must not blow memory on migration.
+    #[test]
+    fn caps_pathological_expansion() {
+        let pattern = "(a|b)".repeat(11);
+        let result = expand_string(&pattern);
+        assert!(
+            result.is_err(),
+            "exponential expansion must be rejected, got Ok with {} entries",
+            result.map(|v| v.len()).unwrap_or(0)
         );
     }
 }

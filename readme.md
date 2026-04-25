@@ -113,7 +113,9 @@ redirections = ['^https?://exit\.sc/\?.*?url=([^&]+)']
 
 # ...plus google, facebook, instagram, bing, youtube, linkedin, mora, amazon
 
-# Fetch providers from a remote URL.
+# Fetch providers from a remote URL. Must be https — `clink update` rejects
+# plaintext http and other schemes so a network attacker can't swap the rule
+# set or have the daemon read arbitrary local files via file:// URLs.
 # Supported formats:
 #   clearurls — ClearURLs data.min.json (https://docs.clearurls.xyz/1.26.1/specs/rules/)
 #   clink     — native clink TOML format

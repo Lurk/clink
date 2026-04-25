@@ -50,7 +50,7 @@ mod tests {
     fn test_validate_good_config() {
         let tmp = std::env::temp_dir().join("clink_test_validate_good.toml");
         let cfg = ClinkConfig::default();
-        confy::store_path(&tmp, &cfg).unwrap();
+        std::fs::write(&tmp, toml::to_string_pretty(&cfg).unwrap()).unwrap();
 
         let result = execute(&tmp);
         assert!(result.is_ok(), "validate should succeed: {:?}", result);

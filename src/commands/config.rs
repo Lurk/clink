@@ -192,8 +192,7 @@ fn do_reset(config_path: &Path) -> Result<(), String> {
         .map_err(|e| format!("Failed to read input: {e}"))?;
 
     if line.trim().eq_ignore_ascii_case("y") {
-        let template = include_str!("../default_config.toml");
-        std::fs::write(config_path, template)
+        std::fs::write(config_path, crate::config::DEFAULT_CONFIG_TEMPLATE)
             .map_err(|e| format!("Failed to write config: {e}"))?;
         println!("Config reset to defaults.");
     } else {
@@ -213,7 +212,7 @@ mod tests {
     fn test_execute_prints_path() {
         let tmp = std::env::temp_dir().join("clink_test_config_path_v2.toml");
         let cfg = ClinkConfig::default();
-        confy::store_path(&tmp, &cfg).unwrap();
+        std::fs::write(&tmp, toml::to_string_pretty(&cfg).unwrap()).unwrap();
 
         let result = execute(&tmp, false, false);
         assert!(result.is_ok());
@@ -225,7 +224,7 @@ mod tests {
     fn test_diff_no_loaded_config() {
         let tmp = std::env::temp_dir().join("clink_test_config_diff_no_loaded.toml");
         let cfg = ClinkConfig::default();
-        confy::store_path(&tmp, &cfg).unwrap();
+        std::fs::write(&tmp, toml::to_string_pretty(&cfg).unwrap()).unwrap();
 
         let loaded_path = std::env::temp_dir().join("clink_test_diff_loaded_does_not_exist.toml");
         let _ = std::fs::remove_file(&loaded_path);

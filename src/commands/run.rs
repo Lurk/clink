@@ -25,6 +25,14 @@ fn log(verbose: bool, msg: &str) {
     let _ = runtime::append_log(&stamped);
 }
 
+// Decide the next iteration's `previous_clipboard`. On a failed clipboard
+// write the system clipboard still holds the dirty text, so keeping the old
+// previous lets the next tick re-detect it as new and retry. Advancing in
+// that case would silently leave tracking params attached.
+fn advance_previous(cleaned: String, old_previous: String, write_failed: bool) -> String {
+    if write_failed { old_previous } else { cleaned }
+}
+
 fn log_err(msg: &str) {
     let stamped = format!(
         "[{}] {msg}",
@@ -124,6 +132,7 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
                 statistics.check_rollovers();
                 statistics.increment(0, 0, 0, 1);
                 let result = clink.find_and_replace(&current_clipboard);
+                let mut write_failed = false;
                 if result.text != current_clipboard {
                     statistics.increment(
                         result.urls_cleaned,
@@ -133,13 +142,15 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
                     );
                     if let Err(e) = ctx.set_contents(result.text.clone()) {
                         log_err(&format!("Failed to set clipboard: {e}"));
+                        write_failed = true;
                     }
 
                     if let Err(e) = stats::save(&statistics, &stats_path) {
                         log_err(&format!("Failed to save stats: {e}"));
                     }
                 }
-                previous_clipboard = result.text;
+                previous_clipboard =
+                    advance_previous(result.text, previous_clipboard, write_failed);
             }
         }
         thread::sleep(sleep_duration);
@@ -174,5 +185,29 @@ mod tests {
             lines.is_empty(),
             "default config must not produce warnings, got {lines:?}"
         );
+    }
+
+    #[test]
+    fn advance_previous_advances_on_successful_write() {
+        let next = advance_previous(
+            "https://test.test/".to_string(),
+            "https://test.test/?fbclid=x".to_string(),
+            false,
+        );
+        assert_eq!(next, "https://test.test/");
+    }
+
+    #[test]
+    fn advance_previous_keeps_old_on_failed_write() {
+        // After a failed clipboard write the user's actual clipboard still has
+        // the dirty text. Keeping the old previous means the next tick sees
+        // the dirty text as "new" and retries — advancing to the cleaned text
+        // would silently abandon the URL with tracking params still attached.
+        let next = advance_previous(
+            "https://test.test/".to_string(),
+            "https://test.test/?fbclid=x".to_string(),
+            true,
+        );
+        assert_eq!(next, "https://test.test/?fbclid=x");
     }
 }

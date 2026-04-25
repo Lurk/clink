@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::migration;
 use crate::mode::Mode;
 
+pub const DEFAULT_CONFIG_TEMPLATE: &str = include_str!("default_config.toml");
+
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct ClinkConfig {
     pub mode: Mode,
     pub replace_to: String,
@@ -53,27 +56,43 @@ impl Default for ClinkConfig {
 pub fn load_config(config_path: &Path) -> Result<ClinkConfig, String> {
     let path = config_path.display();
 
-    if config_path.exists() {
-        let content = std::fs::read_to_string(config_path)
-            .map_err(|e| format!("Failed to read config at {path}: {e}"))?;
-
-        let raw: toml::Value =
-            toml::from_str(&content).map_err(|e| format!("Config error at {path}: {e}"))?;
-
-        if raw.get("params").is_some() || raw.get("exit").is_some() {
-            return migrate_old_config(config_path, &raw);
+    // Auto-init on first run: if the config is missing, write the curated
+    // template (with default providers + remote section) rather than a bare
+    // serialized default. Mirrors what users get by running `clink init` and
+    // matches the behavior the `confy` dependency previously provided.
+    if !config_path.exists() {
+        if let Some(parent) = config_path.parent() {
+            if !parent.as_os_str().is_empty() {
+                std::fs::create_dir_all(parent).map_err(|e| {
+                    format!(
+                        "Failed to create config directory {}: {e}",
+                        parent.display()
+                    )
+                })?;
+            }
         }
+        std::fs::write(config_path, DEFAULT_CONFIG_TEMPLATE)
+            .map_err(|e| format!("Failed to write default config to {path}: {e}"))?;
     }
 
-    let config: ClinkConfig = confy::load_path(config_path).map_err(|e| {
+    let content = std::fs::read_to_string(config_path)
+        .map_err(|e| format!("Failed to read config at {path}: {e}"))?;
+
+    let raw: toml::Value =
+        toml::from_str(&content).map_err(|e| format!("Config error at {path}: {e}"))?;
+
+    if raw.get("params").is_some() || raw.get("exit").is_some() {
+        return migrate_old_config(config_path, &raw);
+    }
+
+    toml::from_str::<ClinkConfig>(&content).map_err(|e| {
         format!(
             "Config error at {path}: {e}\n\n\
              Looks like you have a bad config or config for an old version.\n\
              Config should look like this:\n\n{}",
             toml::to_string_pretty(&ClinkConfig::default()).unwrap()
         )
-    })?;
-    Ok(config)
+    })
 }
 
 fn migrate_old_config(config_path: &Path, raw: &toml::Value) -> Result<ClinkConfig, String> {
@@ -95,13 +114,19 @@ fn migrate_old_config(config_path: &Path, raw: &toml::Value) -> Result<ClinkConf
         .and_then(toml::Value::as_integer)
         .map_or(150, |v| v as u64);
 
-    let remote: Option<crate::remote::Remote> = raw.get("remote").and_then(|v| {
-        let url = v.get("url")?.as_str()?.to_string();
-        let format_str = v.get("format")?.as_str()?;
-        let format: crate::remote::RemoteFormat =
-            toml::from_str(&format!("\"{format_str}\"")).ok()?;
-        Some(crate::remote::Remote { url, format })
-    });
+    // Pre-existing users had no [remote] concept. Default to the standard
+    // clearurls remote so migration preserves builtin/upstream rule coverage;
+    // they can remove the [remote] section to opt out per the README.
+    let remote: Option<crate::remote::Remote> = raw
+        .get("remote")
+        .and_then(|v| {
+            let url = v.get("url")?.as_str()?.to_string();
+            let format_str = v.get("format")?.as_str()?;
+            let format: crate::remote::RemoteFormat =
+                toml::from_str(&format!("\"{format_str}\"")).ok()?;
+            Some(crate::remote::Remote { url, format })
+        })
+        .or_else(|| ClinkConfig::default().remote);
 
     let params: Vec<String> = raw
         .get("params")
@@ -162,8 +187,7 @@ fn migrate_old_config(config_path: &Path, raw: &toml::Value) -> Result<ClinkConf
 
     let new_toml = toml::to_string_pretty(&config)
         .map_err(|e| format!("Failed to serialize migrated config: {e}"))?;
-    std::fs::write(config_path, &new_toml)
-        .map_err(|e| format!("Failed to write migrated config: {e}"))?;
+    crate::runtime::write_atomic(config_path, &new_toml)?;
 
     eprintln!(
         "Config migrated to new provider format. Backup saved to {}",
@@ -212,6 +236,59 @@ mod tests {
         cfg.sleep_duration = 0;
         let warnings = cfg.validate();
         assert!(warnings.iter().any(|w| w.contains("sleep_duration")));
+    }
+
+    // Detect typos like `mod = 'remove'` or `slep_duration = 150` rather than
+    // silently accepting them and falling back to defaults — the user thinks
+    // their setting is active but nothing reads it.
+    #[test]
+    fn config_rejects_unknown_top_level_field() {
+        let toml_str = r#"
+mode = 'remove'
+replace_to = 'clink'
+sleep_duration = 150
+typo_field = 'oops'
+
+[providers]
+"#;
+        let result = toml::from_str::<ClinkConfig>(toml_str);
+        assert!(
+            result.is_err(),
+            "unknown top-level field must be rejected, got Ok"
+        );
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("typo_field"),
+            "error must name the offending field, got: {err}"
+        );
+    }
+
+    // Pre-existing users had no [remote] concept. When their config gets
+    // migrated, default to the standard clearurls remote so they continue
+    // receiving upstream tracking rules — they can always remove [remote]
+    // afterwards to opt out per the README.
+    #[test]
+    fn migrate_defaults_remote_when_old_config_lacks_it() {
+        let dir = std::env::temp_dir().join("clink_test_migrate_default_remote");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let config_path = dir.join("config.toml");
+        let old_config = r#"
+mode = 'remove'
+replace_to = 'clink'
+sleep_duration = 150
+params = ['fbclid']
+"#;
+        std::fs::write(&config_path, old_config).unwrap();
+
+        let config = load_config(&config_path).unwrap();
+        assert!(
+            config.remote.is_some(),
+            "migration must default to a [remote] section when old config lacks one"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
@@ -316,6 +393,41 @@ params = ['fbclid']
         assert!(
             rotated_content.contains("params = ['fbclid']"),
             "rotated backup must contain the pre-migration config"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // Migration writes the new TOML to disk; do it atomically so a crash
+    // between truncation and full write can't leave a half-written config
+    // sitting where the daemon expects valid TOML.
+    #[test]
+    fn migration_write_is_atomic_no_tmp_leftover() {
+        let dir = std::env::temp_dir().join("clink_test_migrate_atomic");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let config_path = dir.join("config.toml");
+        let tmp_path = config_path.with_extension("toml.tmp");
+
+        // Pre-seed a stale `.tmp` sibling. A real atomic-write path overwrites
+        // it on the way through and then renames it away; a plain `fs::write`
+        // to `config.toml` leaves this stale file behind.
+        std::fs::write(&tmp_path, "stale leftover from a prior crash").unwrap();
+
+        let old_config = r"
+mode = 'remove'
+replace_to = 'clink'
+sleep_duration = 150
+params = ['fbclid']
+";
+        std::fs::write(&config_path, old_config).unwrap();
+
+        load_config(&config_path).unwrap();
+
+        assert!(
+            !tmp_path.exists(),
+            "atomic write must consume the .tmp via rename; a plain write leaves it"
         );
 
         let _ = std::fs::remove_dir_all(&dir);

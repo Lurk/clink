@@ -1,4 +1,4 @@
-use crate::config::ClinkConfig;
+use crate::config::DEFAULT_CONFIG_TEMPLATE;
 use crate::service;
 use std::path::Path;
 
@@ -15,8 +15,7 @@ pub fn execute(config_path: &Path) -> Result<(), String> {
             std::fs::create_dir_all(parent)
                 .map_err(|e| format!("Failed to create config directory: {e}"))?;
         }
-        let cfg = ClinkConfig::default();
-        confy::store_path(config_path, &cfg)
+        std::fs::write(config_path, DEFAULT_CONFIG_TEMPLATE)
             .map_err(|e| format!("Failed to write default config: {e}"))?;
         println!("Default config created at {}", config_path.display());
     }

@@ -1,6 +1,27 @@
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+// Write to a sibling `.tmp` file then `rename` over the target so a partial
+// write (Ctrl-C, OOM, power loss) can never leave a corrupt file where the
+// daemon expects valid content.
+pub fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
+    let tmp = {
+        let mut p = path.as_os_str().to_os_string();
+        p.push(".tmp");
+        PathBuf::from(p)
+    };
+    fs::write(&tmp, content).map_err(|e| format!("Failed to write {}: {e}", tmp.display()))?;
+    fs::rename(&tmp, path).map_err(|e| {
+        let _ = fs::remove_file(&tmp);
+        format!(
+            "Failed to rename {} to {}: {e}",
+            tmp.display(),
+            path.display()
+        )
+    })?;
+    Ok(())
+}
 
 pub fn pid_file_path() -> PathBuf {
     runtime_dir().join("clink.pid")

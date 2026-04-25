@@ -1,7 +1,65 @@
 use crate::config::load_config;
 use crate::remote::{RemoteFormat, RemotePatterns};
 use crate::runtime;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::time::Duration;
+
+// Cap the whole request — connect, TLS, headers, body — so a wedged or
+// slow-trickle remote can't hang the daemon's update path indefinitely.
+const FETCH_TIMEOUT: Duration = Duration::from_secs(30);
+
+// 32 MiB is well above the actual ClearURLs payload (~0.5 MB today) but small
+// enough that a hostile or wedged endpoint can't OOM the daemon by streaming
+// gigabytes into the update path.
+const FETCH_MAX_BODY_BYTES: u64 = 32 * 1024 * 1024;
+
+// ureq follows redirects by default. Cap it so a redirect loop can't spin the
+// daemon forever, and so a server can't bounce the fetch through dozens of
+// hosts before we even decide whether to keep the bytes.
+const FETCH_MAX_REDIRECTS: u32 = 5;
+
+// Refuse non-https remote URLs upfront. Plaintext HTTP would let a network
+// attacker swap the rule set (privacy regression or hostile redirections);
+// `file://` / `data:` / etc. would let a hand-edited config read or exfiltrate
+// local files through the same code path.
+fn validate_remote_url(url: &str) -> Result<(), String> {
+    let parsed = url::Url::parse(url).map_err(|e| format!("invalid remote URL '{url}': {e}"))?;
+    if parsed.scheme() != "https" {
+        return Err(format!(
+            "remote URL must use https, got scheme '{}': {url}",
+            parsed.scheme()
+        ));
+    }
+    Ok(())
+}
+
+fn build_agent() -> ureq::Agent {
+    ureq::Agent::config_builder()
+        .timeout_global(Some(FETCH_TIMEOUT))
+        .max_redirects(FETCH_MAX_REDIRECTS)
+        .build()
+        .into()
+}
+
+fn validation_warnings(patterns: &RemotePatterns) -> Vec<String> {
+    patterns
+        .providers
+        .iter()
+        .flat_map(|(name, cfg)| crate::provider::check_provider(name, cfg))
+        .collect()
+}
+
+fn fetch_remote(agent: &ureq::Agent, url: &str, byte_limit: u64) -> Result<String, String> {
+    agent
+        .get(url)
+        .call()
+        .map_err(|e| format!("Failed to fetch remote patterns: {e}"))?
+        .body_mut()
+        .with_config()
+        .limit(byte_limit)
+        .read_to_string()
+        .map_err(|e| format!("Failed to read response body: {e}"))
+}
 
 pub fn execute(config_path: &Path, write_snapshot: Option<&Path>) -> Result<(), String> {
     let cfg = load_config(config_path)?;
@@ -16,19 +74,28 @@ pub fn execute(config_path: &Path, write_snapshot: Option<&Path>) -> Result<(), 
             .to_string(),
     )?;
 
+    validate_remote_url(&remote.url)?;
+
     println!("Fetching patterns from {}", remote.url);
 
-    let body = ureq::get(&remote.url)
-        .call()
-        .map_err(|e| format!("Failed to fetch remote patterns: {e}"))?
-        .body_mut()
-        .read_to_string()
-        .map_err(|e| format!("Failed to read response body: {e}"))?;
+    let agent = build_agent();
+    let body = fetch_remote(&agent, &remote.url, FETCH_MAX_BODY_BYTES)?;
 
     let patterns = match remote.format {
         RemoteFormat::ClearUrls => translate_clearurls(&body)?,
         RemoteFormat::Clink => parse_clink_toml(&body)?,
     };
+
+    let warnings = validation_warnings(&patterns);
+    if !warnings.is_empty() {
+        eprintln!(
+            "Skipped {} invalid pattern(s) (cache will still be written; daemon will skip these at load time):",
+            warnings.len()
+        );
+        for w in &warnings {
+            eprintln!("  - {w}");
+        }
+    }
 
     if let Some(snapshot_path) = write_snapshot {
         let (provider_count, rule_count) = write_patterns_to(snapshot_path, &patterns)?;
@@ -57,32 +124,11 @@ fn write_patterns_to(path: &Path, patterns: &RemotePatterns) -> Result<(usize, u
     }
     let content = toml::to_string_pretty(patterns)
         .map_err(|e| format!("Failed to serialize patterns: {e}"))?;
-    write_atomic(path, &content)?;
+    runtime::write_atomic(path, &content)?;
 
     let provider_count = patterns.providers.len();
     let rule_count: usize = patterns.providers.values().map(|p| p.rules.len()).sum();
     Ok((provider_count, rule_count))
-}
-
-// Write to a sibling `.tmp` file then `rename` over the target so a partial
-// write (Ctrl-C, OOM, power loss) can never leave a corrupt cache that would
-// silently fall back to the embedded snapshot at next clink start.
-fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
-    let tmp = {
-        let mut p = path.as_os_str().to_os_string();
-        p.push(".tmp");
-        PathBuf::from(p)
-    };
-    std::fs::write(&tmp, content).map_err(|e| format!("Failed to write {}: {e}", tmp.display()))?;
-    std::fs::rename(&tmp, path).map_err(|e| {
-        let _ = std::fs::remove_file(&tmp);
-        format!(
-            "Failed to rename {} to {}: {e}",
-            tmp.display(),
-            path.display()
-        )
-    })?;
-    Ok(())
 }
 
 fn translate_clearurls(body: &str) -> Result<RemotePatterns, String> {
@@ -93,6 +139,12 @@ fn translate_clearurls(body: &str) -> Result<RemotePatterns, String> {
         result.providers.len(),
         result.rules_translated
     );
+    if result.complete_providers_skipped > 0 {
+        println!(
+            "Skipped {} ClearURLs `completeProvider` entries (block-the-whole-site rules — clink only strips params, not full domains)",
+            result.complete_providers_skipped
+        );
+    }
     println!(
         "ClearURLs data provided by the ClearURLs project (LGPLv3) — https://docs.clearurls.xyz"
     );
@@ -109,6 +161,143 @@ fn parse_clink_toml(body: &str) -> Result<RemotePatterns, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn validate_remote_url_accepts_https() {
+        assert!(validate_remote_url("https://rules2.clearurls.xyz/data.min.json").is_ok());
+    }
+
+    #[test]
+    fn validate_remote_url_rejects_http() {
+        let err = validate_remote_url("http://rules2.clearurls.xyz/data.min.json").unwrap_err();
+        assert!(
+            err.to_lowercase().contains("https"),
+            "rejection must mention https requirement, got: {err}"
+        );
+    }
+
+    #[test]
+    fn validate_remote_url_rejects_file_scheme() {
+        let err = validate_remote_url("file:///etc/passwd").unwrap_err();
+        assert!(
+            err.to_lowercase().contains("https"),
+            "rejection must mention https requirement, got: {err}"
+        );
+    }
+
+    #[test]
+    fn validate_remote_url_rejects_garbage() {
+        assert!(validate_remote_url("not a url").is_err());
+    }
+
+    fn spawn_oversized_server(body_size: usize) -> String {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut buf = [0u8; 4096];
+                let _ = stream.read(&mut buf);
+                let _ = write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\nContent-Length: {body_size}\r\nConnection: close\r\n\r\n"
+                );
+                let _ = stream.write_all(&vec![b'x'; body_size]);
+            }
+        });
+        format!("http://127.0.0.1:{port}/")
+    }
+
+    fn spawn_redirect_loop_server() -> String {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let url = format!("http://127.0.0.1:{port}/");
+        let target = url.clone();
+        std::thread::spawn(move || {
+            for stream in listener.incoming().flatten() {
+                let mut s = stream;
+                let mut buf = [0u8; 4096];
+                let _ = s.read(&mut buf);
+                let _ = write!(
+                    s,
+                    "HTTP/1.1 302 Found\r\nLocation: {target}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                );
+            }
+        });
+        url
+    }
+
+    #[test]
+    fn fetch_remote_rejects_oversized_body() {
+        let url = spawn_oversized_server(8192);
+        let agent = build_agent();
+        let result = fetch_remote(&agent, &url, 1024);
+        assert!(
+            result.is_err(),
+            "body larger than the byte limit must be rejected, got Ok"
+        );
+    }
+
+    #[test]
+    fn validation_warnings_empty_for_clean_patterns() {
+        let mut providers = std::collections::HashMap::new();
+        providers.insert(
+            "ok".to_string(),
+            crate::provider::ProviderConfig {
+                url_pattern: Some(r"^https?://example\.com".into()),
+                rules: vec!["fbclid".into(), "(?:ref_?)?src".into()],
+                ..Default::default()
+            },
+        );
+        let patterns = RemotePatterns { providers };
+        assert!(validation_warnings(&patterns).is_empty());
+    }
+
+    #[test]
+    fn validation_warnings_flags_bad_url_pattern() {
+        let mut providers = std::collections::HashMap::new();
+        providers.insert(
+            "bad".to_string(),
+            crate::provider::ProviderConfig {
+                url_pattern: Some("[unclosed".into()),
+                ..Default::default()
+            },
+        );
+        let patterns = RemotePatterns { providers };
+        let warnings = validation_warnings(&patterns);
+        assert_eq!(warnings.len(), 1, "expected one warning, got {warnings:?}");
+        assert!(warnings[0].contains("bad"));
+    }
+
+    #[test]
+    fn validation_warnings_flags_bad_rule_regex() {
+        let mut providers = std::collections::HashMap::new();
+        providers.insert(
+            "scoped".to_string(),
+            crate::provider::ProviderConfig {
+                url_pattern: Some(r"^https?://x\.com".into()),
+                rules: vec!["[bad".into()],
+                ..Default::default()
+            },
+        );
+        let patterns = RemotePatterns { providers };
+        let warnings = validation_warnings(&patterns);
+        assert_eq!(warnings.len(), 1, "expected one warning, got {warnings:?}");
+    }
+
+    #[test]
+    fn fetch_remote_caps_redirect_chain() {
+        let url = spawn_redirect_loop_server();
+        let agent = build_agent();
+        let result = fetch_remote(&agent, &url, 8192);
+        assert!(
+            result.is_err(),
+            "infinite redirect loop must be capped at FETCH_MAX_REDIRECTS"
+        );
+    }
 
     #[test]
     fn test_parse_clink_toml_valid() {

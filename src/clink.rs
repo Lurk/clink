@@ -60,13 +60,28 @@ impl Clink {
     }
 
     pub fn find_and_replace(&self, input: &str) -> CleanResult {
-        let mut res = input.to_string();
         let mut urls_cleaned: u32 = 0;
         let mut params_removed: u32 = 0;
         let mut exits_unwrapped: u32 = 0;
 
+        // Splice each cleaned URL back at its linkify byte range rather than
+        // search-and-replace on the whole string. Naive `String::replace`
+        // would match the original link text wherever it appears — and a
+        // shorter URL that's a textual prefix of a neighbouring URL would
+        // get its replacement bleed into the longer one.
+        let mut res = String::with_capacity(input.len());
+        let mut last_end = 0usize;
+
         for link in self.finder.links(input) {
-            let (mut l, was_exit) = self.parse_link(link.as_str());
+            res.push_str(&input[last_end..link.start()]);
+            let Some((mut l, was_exit)) = self.parse_link(link.as_str()) else {
+                // linkify is more permissive than url::Url (e.g. accepts
+                // out-of-range ports). Keep the original text rather than
+                // crashing the daemon on user clipboard content.
+                res.push_str(link.as_str());
+                last_end = link.end();
+                continue;
+            };
             if was_exit {
                 exits_unwrapped += 1;
             }
@@ -103,9 +118,13 @@ impl Clink {
             if query_changed || was_exit {
                 urls_cleaned += 1;
                 params_removed += removed;
-                res = res.replace(link.as_str(), new_url);
+                res.push_str(new_url);
+            } else {
+                res.push_str(link.as_str());
             }
+            last_end = link.end();
         }
+        res.push_str(&input[last_end..]);
 
         CleanResult {
             text: res,
@@ -209,17 +228,38 @@ impl Clink {
     // Redirect captures (e.g. exit.sc's `url=...` value) aren't guaranteed to
     // be valid URLs once decoded — junk values would otherwise crash the
     // daemon. Fall back to the original linkify-found link in that case.
-    fn parse_link(&self, link: &str) -> (Url, bool) {
-        let (unwrapped, was_exit) = self.try_unwrap_redirect(link);
-        if was_exit {
-            if let Ok(parsed) = Url::parse(&unwrapped) {
-                return (parsed, true);
+    //
+    // Loop the unwrap so chained redirectors (e.g. exit.sc → google.com/url
+    // → real URL) collapse to the innermost destination. The bound caps
+    // pathological cycles (a malicious provider with a self-capturing
+    // redirection regex would otherwise spin forever).
+    //
+    // Returns None when the original link itself isn't url::Url-parseable —
+    // linkify is more permissive than url::Url, so the caller must fall back
+    // to the raw clipboard text rather than panicking.
+    fn parse_link(&self, link: &str) -> Option<(Url, bool)> {
+        const MAX_UNWRAPS: u32 = 5;
+        let mut current = link.to_string();
+        let mut any_unwrap = false;
+        for _ in 0..MAX_UNWRAPS {
+            let (unwrapped, was_exit) = self.try_unwrap_redirect(&current);
+            if !was_exit {
+                break;
             }
+            if Url::parse(&unwrapped).is_err() {
+                // Garbage at this step — keep what we already unwrapped.
+                break;
+            }
+            current = unwrapped;
+            any_unwrap = true;
         }
-        (
-            Url::parse(link).expect("linkify-found URL to be parsable"),
-            false,
-        )
+        if any_unwrap {
+            return Some((
+                Url::parse(&current).expect("validated parseable above"),
+                true,
+            ));
+        }
+        Url::parse(link).ok().map(|u| (u, false))
     }
 }
 
@@ -233,8 +273,7 @@ fn swap_two_chars(s: &str, a: usize, b: usize) -> String {
 fn test_config(mode: Mode) -> ClinkConfig {
     let id = std::thread::current().id();
     let tmp = std::env::temp_dir().join(format!("clink_test_cfg_{id:?}.toml"));
-    let template = include_str!("default_config.toml");
-    std::fs::write(&tmp, template).unwrap();
+    std::fs::write(&tmp, crate::config::DEFAULT_CONFIG_TEMPLATE).unwrap();
     let mut cfg = crate::config::load_config(&tmp).unwrap();
     cfg.mode = mode;
     let _ = std::fs::remove_file(&tmp);
@@ -670,6 +709,59 @@ mod find_and_replace {
     }
 
     #[test]
+    fn shorter_link_does_not_corrupt_neighbour_when_it_is_a_prefix() {
+        // Cleaning the first URL must not bleed into the second. With a
+        // naive `String::replace`, the substring `https://test.test/?fbclid=a`
+        // also matches inside `https://test.test/?fbclid=ab`, leaving a
+        // stray `b` stranded after the second URL gets rewritten.
+        let clink = Clink::new(test_config(Mode::Remove));
+        let input = "https://test.test/?fbclid=a https://test.test/?fbclid=ab";
+        let result = clink.find_and_replace(input);
+        assert_eq!(
+            result.text, "https://test.test/ https://test.test/",
+            "splice-by-range must not let one link's replacement leak into another"
+        );
+        assert_eq!(result.urls_cleaned, 2);
+    }
+
+    #[test]
+    fn chained_redirect_unwraps_to_inner_destination() {
+        // Wrap a youtube.com/redirect link inside a google.com/url redirect;
+        // the daemon should peel both layers in one pass, not just the outer.
+        let clink = Clink::new(test_config(Mode::Remove));
+        let input = "https://www.google.com/url?q=https%3A%2F%2Fwww.youtube.com%2Fredirect%3Fq%3Dhttps%253A%252F%252Fexample.com&sa=t";
+        let result = clink.find_and_replace(input);
+        assert_eq!(
+            result.text, "https://example.com/",
+            "chained redirect should unwrap to the innermost destination"
+        );
+        assert_eq!(
+            result.exits_unwrapped, 1,
+            "a chain that resolves should still count as one cleaned URL"
+        );
+    }
+
+    #[test]
+    fn chained_redirect_with_unparseable_inner_keeps_outer_unwrap() {
+        // First hop unwraps to a valid URL; the would-be second hop captures
+        // garbage. We must keep the first-level unwrap rather than discarding
+        // it — and must not panic on the bad inner.
+        let clink = Clink::new(test_config(Mode::Remove));
+        // exit.sc → google.com/url?q=not_a_url. The outer unwrap yields a
+        // valid google URL; the inner google `q=` capture is garbage and
+        // should be retained as-is at the first hop.
+        let input = "https://exit.sc/?url=https%3A%2F%2Fwww.google.com%2Furl%3Fq%3Dnot_a_url";
+        // Just must not panic and must produce a parseable URL in output.
+        let result = clink.find_and_replace(input);
+        assert!(
+            url::Url::parse(&result.text).is_ok(),
+            "output must remain a parseable URL, got {}",
+            result.text
+        );
+        assert_eq!(result.exits_unwrapped, 1);
+    }
+
+    #[test]
     fn instagram_igsh_stripped() {
         let clink = Clink::new(test_config(Mode::Remove));
         assert_eq!(
@@ -758,6 +850,35 @@ mod find_and_replace {
         );
     }
 
+    // linkify is more permissive than url::Url — e.g. it accepts
+    // `https://example.com:65536/foo` (port out of u16 range) but url::Url
+    // rejects it. The daemon used to panic on these, then restart and re-read
+    // the same clipboard, looping. Skip the link instead.
+    #[test]
+    fn unparseable_link_leaves_clipboard_untouched_no_panic() {
+        let clink = Clink::new(test_config(Mode::Remove));
+        let input = "before https://example.com:65536/foo?fbclid=abc after";
+        let result = clink.find_and_replace(input);
+        assert_eq!(
+            result.text, input,
+            "unparseable URL must leave the original text untouched"
+        );
+        assert_eq!(result.urls_cleaned, 0);
+        assert_eq!(result.params_removed, 0);
+    }
+
+    #[test]
+    fn unparseable_link_does_not_block_neighbour_url() {
+        let clink = Clink::new(test_config(Mode::Remove));
+        let input = "https://example.com:65536/foo https://test.test/?fbclid=abc";
+        let result = clink.find_and_replace(input);
+        assert_eq!(
+            result.text, "https://example.com:65536/foo https://test.test/",
+            "second URL should still be cleaned even if the first is unparseable"
+        );
+        assert_eq!(result.urls_cleaned, 1);
+    }
+
     #[test]
     fn lookalike_domains_do_not_match_shipped_providers() {
         // Shipped patterns in default_config.toml must require a host-end
@@ -793,8 +914,7 @@ mod find_and_replace {
         let _ = std::fs::remove_dir_all(&cache_dir);
         std::fs::create_dir_all(&cache_dir).unwrap();
 
-        let template = include_str!("default_config.toml");
-        std::fs::write(&cfg_path, template).unwrap();
+        std::fs::write(&cfg_path, crate::config::DEFAULT_CONFIG_TEMPLATE).unwrap();
 
         let cache_toml = "[providers.global]\nrules = [\"fbclid\", \"gclid\"]\n";
         std::fs::write(cache_dir.join("remote_patterns.toml"), cache_toml).unwrap();

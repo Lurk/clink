@@ -17,8 +17,14 @@ pub fn migrate_params(params: &[String]) -> HashMap<String, ProviderConfig> {
 
     for param in params {
         if let Some((domain_pattern, param_pattern)) = param.split_once("``") {
-            let expanded_domains = expand_string(domain_pattern);
-            let expanded_params = expand_string(param_pattern);
+            let (expanded_domains, expanded_params) =
+                match (expand_string(domain_pattern), expand_string(param_pattern)) {
+                    (Ok(d), Ok(p)) => (d, p),
+                    (Err(e), _) | (_, Err(e)) => {
+                        eprintln!("clink: skipping migration of `{param}`: {e}");
+                        continue;
+                    }
+                };
 
             for domain in &expanded_domains {
                 let name = domain_to_provider_name(domain);
@@ -54,7 +60,13 @@ pub fn migrate_exits(exits: &[Vec<String>]) -> HashMap<String, ProviderConfig> {
         let url_pattern = &entry[0];
         let params: &[String] = &entry[1..];
 
-        let expanded_urls = expand_string(url_pattern);
+        let expanded_urls = match expand_string(url_pattern) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("clink: skipping exit migration of `{url_pattern}`: {e}");
+                continue;
+            }
+        };
 
         for url in &expanded_urls {
             let domain_part = url.split('/').next().unwrap_or(url);
@@ -212,6 +224,23 @@ mod tests {
         let exits: Vec<Vec<String>> = vec![vec![], vec!["only_url".into()]];
         let result = migrate_exits(&exits);
         assert!(result.is_empty());
+    }
+
+    // A pathological domain pattern (deeply nested alternations) must not blow
+    // up migration of the rest of the legacy config. Skip the offending entry,
+    // keep everything else.
+    #[test]
+    fn pathological_pattern_skipped_other_params_still_migrate() {
+        let pathological = format!("{}``foo", "(a|b)".repeat(11));
+        let params = vec![pathological, "fbclid".into(), "youtube.com``si".into()];
+        let result = migrate_params(&params);
+
+        assert!(result.contains_key("global"));
+        assert!(result["global"].rules.contains(&"fbclid".to_string()));
+        assert!(
+            result.contains_key("youtube_com"),
+            "non-pathological domain-scoped param must still migrate"
+        );
     }
 
     #[test]

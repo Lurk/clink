@@ -34,6 +34,7 @@ struct ClearUrlsProvider {
 pub struct TranslationResult {
     pub providers: HashMap<String, ProviderConfig>,
     pub rules_translated: usize,
+    pub complete_providers_skipped: usize,
 }
 
 pub fn translate(json: &str) -> Result<TranslationResult, String> {
@@ -42,9 +43,11 @@ pub fn translate(json: &str) -> Result<TranslationResult, String> {
 
     let mut providers = HashMap::new();
     let mut rules_translated = 0usize;
+    let mut complete_providers_skipped = 0usize;
 
     for (name, cu_provider) in &data.providers {
         if cu_provider.complete_provider {
+            complete_providers_skipped += 1;
             continue;
         }
 
@@ -78,6 +81,7 @@ pub fn translate(json: &str) -> Result<TranslationResult, String> {
     Ok(TranslationResult {
         providers,
         rules_translated,
+        complete_providers_skipped,
     })
 }
 
@@ -186,6 +190,50 @@ mod tests {
         }"#;
         let result = translate(json).unwrap();
         assert!(result.providers.is_empty());
+    }
+
+    // Users who expected, say, facebook rules from upstream and got nothing
+    // shouldn't have to dig through the source — `clink update` should report
+    // the count so they know the gap is upstream-by-design, not a bug.
+    #[test]
+    fn translate_reports_complete_providers_skipped_count() {
+        let json = r#"{
+            "providers": {
+                "blocked1": {
+                    "urlPattern": "^https?://b1\\.com",
+                    "completeProvider": true,
+                    "rules": [],
+                    "referralMarketing": [],
+                    "rawRules": [],
+                    "exceptions": [],
+                    "redirections": [],
+                    "forceRedirection": false
+                },
+                "blocked2": {
+                    "urlPattern": "^https?://b2\\.com",
+                    "completeProvider": true,
+                    "rules": [],
+                    "referralMarketing": [],
+                    "rawRules": [],
+                    "exceptions": [],
+                    "redirections": [],
+                    "forceRedirection": false
+                },
+                "ok": {
+                    "urlPattern": "^https?://ok\\.com",
+                    "completeProvider": false,
+                    "rules": ["fbclid"],
+                    "referralMarketing": [],
+                    "rawRules": [],
+                    "exceptions": [],
+                    "redirections": [],
+                    "forceRedirection": false
+                }
+            }
+        }"#;
+        let result = translate(json).unwrap();
+        assert_eq!(result.complete_providers_skipped, 2);
+        assert_eq!(result.providers.len(), 1);
     }
 
     #[test]

@@ -5,6 +5,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(deny_unknown_fields)]
 pub struct ProviderConfig {
     #[serde(default)]
     pub url_pattern: Option<String>,
@@ -178,6 +179,28 @@ impl CompiledProvider {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+
+    // A typo'd field (e.g. `rule` for `rules`) in either the user's config or
+    // a hand-edited cache must surface as a parse error rather than being
+    // silently dropped — otherwise the user thinks their rule is active but
+    // nothing strips it.
+    #[test]
+    fn provider_config_rejects_unknown_field() {
+        let toml_str = r#"
+url_pattern = '^https?://example\.com'
+rule = ["fbclid"]
+"#;
+        let result = toml::from_str::<ProviderConfig>(toml_str);
+        assert!(
+            result.is_err(),
+            "unknown field `rule` must be rejected, got Ok"
+        );
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("rule"),
+            "error must name the offending field, got: {err}"
+        );
+    }
 
     #[test]
     fn provider_config_serde_roundtrip() {

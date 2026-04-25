@@ -1,6 +1,5 @@
+use crate::config::DEFAULT_CONFIG_TEMPLATE;
 use std::path::Path;
-
-const DEFAULT_CONFIG_TEMPLATE: &str = include_str!("../default_config.toml");
 
 pub fn execute(config_path: &Path) -> Result<(), String> {
     if config_path.is_file() {

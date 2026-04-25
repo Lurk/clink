@@ -14,19 +14,33 @@ pub enum RemoteFormat {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Remote {
     pub url: String,
     pub format: RemoteFormat,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct RemotePatterns {
     pub providers: HashMap<String, crate::provider::ProviderConfig>,
 }
 
 pub fn resolve_patterns(config: &mut ClinkConfig, data_dir: &Path) -> Vec<String> {
-    let cache_path = data_dir.join("remote_patterns.toml");
     let mut warnings = Vec::new();
+
+    // README documents that removing the [remote] section opts out of
+    // remote/builtin merging. Honor that — without an opt-out, a user who
+    // wants only their own providers can't suppress the bundled ClearURLs
+    // snapshot without writing an empty `remote_patterns.toml`.
+    if config.remote.is_none() {
+        if config.verbose {
+            eprintln!("no [remote] section — using only locally configured providers");
+        }
+        return warnings;
+    }
+
+    let cache_path = data_dir.join("remote_patterns.toml");
 
     // Distinguish "no cache" (normal first-run state) from "cache present but
     // unreadable/unparseable" — the second case means `clink update` produced
@@ -120,6 +134,120 @@ sleep_duration = 150
 "#;
         let loaded: ClinkConfig = toml::from_str(toml_str).unwrap();
         assert!(loaded.remote.is_none());
+    }
+
+    // A typo at the top level of `remote_patterns.toml` (e.g. `provider`
+    // instead of `providers`) must surface as a parse error rather than
+    // silently producing an empty rule set — otherwise the daemon falls back
+    // to the builtin and the user's hand-edited cache appears to "work" while
+    // doing nothing.
+    #[test]
+    fn remote_patterns_rejects_unknown_field() {
+        // `providers` is present and valid; the test is whether an *extra*
+        // top-level key gets caught.
+        let toml_str = r#"
+banana = 1
+
+[providers.global]
+rules = ["fbclid"]
+"#;
+        let result = toml::from_str::<RemotePatterns>(toml_str);
+        assert!(
+            result.is_err(),
+            "unknown field `banana` must be rejected, got Ok"
+        );
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("banana"),
+            "error must name the offending field, got: {err}"
+        );
+    }
+
+    // A typo'd field in the `[remote]` section (e.g. `urll = ...`) must
+    // surface as a parse error rather than being silently dropped — otherwise
+    // the user thinks they configured a remote and the daemon falls back to
+    // builtin while doing nothing they can see.
+    #[test]
+    fn remote_rejects_unknown_field() {
+        let toml_str = r#"
+url = 'https://example.com'
+format = 'clearurls'
+extra = 'oops'
+"#;
+        let result = toml::from_str::<Remote>(toml_str);
+        assert!(
+            result.is_err(),
+            "unknown field in [remote] must be rejected, got Ok"
+        );
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("extra"),
+            "error must name the offending field, got: {err}"
+        );
+    }
+
+    // README documents that removing the [remote] section opts out of
+    // remote/builtin merging. Honor that: with no [remote], resolve must not
+    // splice cached or builtin patterns into the user's providers.
+    #[test]
+    fn test_resolve_no_remote_section_skips_builtin_with_no_cache() {
+        let dir = std::env::temp_dir().join("clink_test_no_remote_no_cache");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let mut cfg = ClinkConfig {
+            remote: None,
+            ..ClinkConfig::default()
+        };
+
+        resolve_patterns(&mut cfg, &dir);
+
+        assert!(
+            cfg.providers.is_empty(),
+            "no [remote] + no local providers must yield empty providers (no builtin merge), got {:?}",
+            cfg.providers.keys().collect::<Vec<_>>()
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_resolve_no_remote_section_skips_cache_too() {
+        let dir = std::env::temp_dir().join("clink_test_no_remote_with_cache");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let mut cache_providers = HashMap::new();
+        cache_providers.insert(
+            "global".to_string(),
+            crate::provider::ProviderConfig {
+                rules: vec!["should_not_appear".into()],
+                ..Default::default()
+            },
+        );
+        let cache = RemotePatterns {
+            providers: cache_providers,
+        };
+        std::fs::write(
+            dir.join("remote_patterns.toml"),
+            toml::to_string(&cache).unwrap(),
+        )
+        .unwrap();
+
+        let mut cfg = ClinkConfig {
+            remote: None,
+            ..ClinkConfig::default()
+        };
+
+        resolve_patterns(&mut cfg, &dir);
+
+        assert!(
+            cfg.providers.is_empty(),
+            "no [remote] must not merge cached patterns either, got {:?}",
+            cfg.providers.keys().collect::<Vec<_>>()
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
