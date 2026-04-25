@@ -722,6 +722,43 @@ mod find_and_replace {
     }
 
     #[test]
+    fn twitter_srcset_param_not_stripped_by_unanchored_src_rule() {
+        // Twitter's bundled ClearURLs rule `(?:ref_?)?src` must match
+        // anchored. Without anchoring, `?srcset=…` would be stripped because
+        // "src" is a substring of "srcset".
+        let clink = Clink::new(test_config(Mode::Remove));
+        assert_eq!(
+            clink
+                .find_and_replace("https://twitter.com/user/status/1?srcset=app&keep=yes")
+                .text,
+            "https://twitter.com/user/status/1?srcset=app&keep=yes",
+            "srcset param must not be stripped by anchored `src` rule"
+        );
+    }
+
+    #[test]
+    fn twitter_src_param_stripped() {
+        let clink = Clink::new(test_config(Mode::Remove));
+        assert_eq!(
+            clink
+                .find_and_replace("https://twitter.com/user/status/1?src=app&keep=yes")
+                .text,
+            "https://twitter.com/user/status/1?keep=yes"
+        );
+    }
+
+    #[test]
+    fn fbclid_stripped_case_insensitively() {
+        let clink = Clink::new(test_config(Mode::Remove));
+        assert_eq!(
+            clink
+                .find_and_replace("https://test.test/?Fbclid=abc&keep=yes")
+                .text,
+            "https://test.test/?keep=yes"
+        );
+    }
+
+    #[test]
     fn lookalike_domains_do_not_match_shipped_providers() {
         // Shipped patterns in default_config.toml must require a host-end
         // boundary; otherwise `amazon.com.attacker.com/?sp_csd=...` would

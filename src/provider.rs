@@ -25,6 +25,19 @@ const REGEX_CHARS: &[char] = &[
     '[', ']', '(', ')', '{', '}', '*', '+', '?', '\\', '|', '^', '$',
 ];
 
+// ClearURLs wraps every rule as `^(?:rule)$` with the `i` flag before testing
+// against a parameter name (see ClearURLs/Addon clearurls.js:122). The rules
+// data is authored assuming that wrapping. clink consumes the same data, so
+// it must wrap identically — without it, `(?:ref_?)?src` substring-matches
+// `srcset`, and case-permuted params like `?Fbclid=` slip through.
+fn wrap_rule(rule: &str) -> String {
+    format!("(?i)^(?:{rule})$")
+}
+
+fn case_insensitive(pattern: &str) -> String {
+    format!("(?i){pattern}")
+}
+
 impl CompiledRules {
     pub fn new(rules: &[String]) -> Self {
         let mut literals = HashSet::new();
@@ -32,11 +45,11 @@ impl CompiledRules {
 
         for rule in rules {
             if rule.contains(REGEX_CHARS) {
-                if let Ok(re) = Regex::new(rule) {
+                if let Ok(re) = Regex::new(&wrap_rule(rule)) {
                     patterns.push(re);
                 }
             } else {
-                literals.insert(rule.clone());
+                literals.insert(rule.to_lowercase());
             }
         }
 
@@ -44,7 +57,8 @@ impl CompiledRules {
     }
 
     pub fn is_tracked(&self, param: &str) -> bool {
-        self.literals.contains(param) || self.patterns.iter().any(|re| re.is_match(param))
+        let lower = param.to_lowercase();
+        self.literals.contains(&lower) || self.patterns.iter().any(|re| re.is_match(param))
     }
 }
 
@@ -58,7 +72,7 @@ pub struct CompiledProvider {
 pub fn check_provider(name: &str, config: &ProviderConfig) -> Vec<String> {
     let mut warnings = Vec::new();
     if let Some(pattern) = &config.url_pattern {
-        if let Err(e) = Regex::new(pattern) {
+        if let Err(e) = Regex::new(&case_insensitive(pattern)) {
             warnings.push(format!(
                 "[providers.{name}] url_pattern '{pattern}' failed to compile: {e}"
             ));
@@ -66,7 +80,7 @@ pub fn check_provider(name: &str, config: &ProviderConfig) -> Vec<String> {
     }
     for rule in &config.rules {
         if rule.contains(REGEX_CHARS) {
-            if let Err(e) = Regex::new(rule) {
+            if let Err(e) = Regex::new(&wrap_rule(rule)) {
                 warnings.push(format!(
                     "[providers.{name}] rule '{rule}' failed to compile: {e}"
                 ));
@@ -74,14 +88,14 @@ pub fn check_provider(name: &str, config: &ProviderConfig) -> Vec<String> {
         }
     }
     for redir in &config.redirections {
-        if let Err(e) = Regex::new(redir) {
+        if let Err(e) = Regex::new(&case_insensitive(redir)) {
             warnings.push(format!(
                 "[providers.{name}] redirection '{redir}' failed to compile: {e}"
             ));
         }
     }
     for exc in &config.exceptions {
-        if let Err(e) = Regex::new(exc) {
+        if let Err(e) = Regex::new(&case_insensitive(exc)) {
             warnings.push(format!(
                 "[providers.{name}] exception '{exc}' failed to compile: {e}"
             ));
@@ -93,20 +107,20 @@ pub fn check_provider(name: &str, config: &ProviderConfig) -> Vec<String> {
 impl CompiledProvider {
     pub fn new(config: &ProviderConfig) -> Option<Self> {
         let pattern_str = config.url_pattern.as_ref()?;
-        let url_pattern = Regex::new(pattern_str).ok()?;
+        let url_pattern = Regex::new(&case_insensitive(pattern_str)).ok()?;
 
         let rules = CompiledRules::new(&config.rules);
 
         let redirections = config
             .redirections
             .iter()
-            .filter_map(|r| Regex::new(r).ok())
+            .filter_map(|r| Regex::new(&case_insensitive(r)).ok())
             .collect();
 
         let exceptions = config
             .exceptions
             .iter()
-            .filter_map(|r| Regex::new(r).ok())
+            .filter_map(|r| Regex::new(&case_insensitive(r)).ok())
             .collect();
 
         Some(Self {
@@ -215,13 +229,49 @@ rules = ["fbclid", "gclid"]
 
     #[test]
     fn compiled_rules_matches_regex() {
-        let rules = CompiledRules::new(&["^utm_".to_string()]);
+        // Rules are wrapped as ^(?:rule)$ (ClearURLs semantics), so a
+        // user-authored rule must spell out what comes after the prefix.
+        let rules = CompiledRules::new(&["utm_[a-z]+".to_string()]);
 
         assert!(rules.is_tracked("utm_source"));
         assert!(rules.is_tracked("utm_campaign"));
         assert!(rules.is_tracked("utm_medium"));
         assert!(!rules.is_tracked("page"));
         assert!(!rules.is_tracked("not_utm_source"));
+    }
+
+    #[test]
+    fn compiled_rules_regex_is_anchored() {
+        // ClearURLs wraps every rule as ^…$ before testing it against a
+        // parameter name. Clink consumes the same data and must match. The
+        // twitter rule `(?:ref_?)?src` should match `src`, `refsrc`,
+        // `ref_src` — but NOT substring-match `source`.
+        let rules = CompiledRules::new(&["(?:ref_?)?src".to_string()]);
+        assert!(rules.is_tracked("src"));
+        assert!(rules.is_tracked("refsrc"));
+        assert!(rules.is_tracked("ref_src"));
+        assert!(
+            !rules.is_tracked("source"),
+            "anchored regex must not substring-match 'source'"
+        );
+        assert!(
+            !rules.is_tracked("data-src"),
+            "anchored regex must not substring-match"
+        );
+    }
+
+    #[test]
+    fn compiled_rules_match_is_case_insensitive() {
+        let rules = CompiledRules::new(&["fbclid".to_string(), "utm_[a-z]+".to_string()]);
+        assert!(
+            rules.is_tracked("Fbclid"),
+            "literal lookup must be case-insensitive"
+        );
+        assert!(rules.is_tracked("FBCLID"));
+        assert!(
+            rules.is_tracked("UTM_source"),
+            "regex lookup must be case-insensitive"
+        );
     }
 
     #[test]
@@ -309,6 +359,50 @@ rules = ["fbclid", "gclid"]
         assert!(
             !provider.matches_url("https://exit.sc/admin/?url=https%3A%2F%2Fbar.com"),
             "excepted URL must not be treated as matching"
+        );
+    }
+
+    #[test]
+    fn compiled_provider_url_pattern_is_case_insensitive() {
+        let config = ProviderConfig {
+            url_pattern: Some(r"^https?://youtube\.com".to_string()),
+            ..Default::default()
+        };
+        let provider = CompiledProvider::new(&config).unwrap();
+        assert!(
+            provider.matches_url("https://YouTube.com/watch"),
+            "url_pattern must match host case-insensitively"
+        );
+    }
+
+    #[test]
+    fn compiled_provider_redirection_is_case_insensitive() {
+        let config = ProviderConfig {
+            url_pattern: Some(r"^https?://exit\.sc".to_string()),
+            redirections: vec![r"url=([^&]+)".to_string()],
+            ..Default::default()
+        };
+        let provider = CompiledProvider::new(&config).unwrap();
+        let result = provider
+            .try_redirect("https://exit.sc/?URL=https%3A%2F%2Fexample.com")
+            .expect("uppercase URL= should still capture");
+        assert_eq!(result, "https://example.com");
+    }
+
+    #[test]
+    fn compiled_provider_exception_is_case_insensitive() {
+        // Isolate exception case-sensitivity: url_pattern matches as-is, only
+        // the path differs in case. Without (?i) on the exception, the
+        // exception silently fails to apply.
+        let config = ProviderConfig {
+            url_pattern: Some(r"^https?://exit\.sc".to_string()),
+            exceptions: vec![r"^https?://exit\.sc/admin".to_string()],
+            ..Default::default()
+        };
+        let provider = CompiledProvider::new(&config).unwrap();
+        assert!(
+            !provider.matches_url("https://exit.sc/ADMIN/?url=foo"),
+            "exception must apply case-insensitively"
         );
     }
 
