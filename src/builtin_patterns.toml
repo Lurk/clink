@@ -1,0 +1,1764 @@
+# Built-in tracking patterns. Derived from ClearURLs (LGPL-3.0).
+# https://docs.clearurls.xyz  —  https://gitlab.com/ClearURLs/Rules
+# Regenerate with: scripts/refresh-snapshot.sh
+
+[providers."change.org"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?change\.org'
+rules = [
+    "source_location",
+    "psf_variant",
+    "share_intent",
+]
+redirections = []
+
+[providers."marketscreener.com search"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?marketscreener\.com\/search\/\?'
+rules = [
+    "type_recherche",
+    "noredirect",
+    "RewriteLast",
+    "lien",
+    "aComposeInputSearch",
+    "type_recherche_forum",
+    "countview",
+]
+redirections = []
+
+[providers.aliexpress]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?aliexpress(?:\.[a-z]{2,}){1,}'
+rules = [
+    "ws_ab_test",
+    "btsid",
+    "algo_expid",
+    "algo_pvid",
+    "gps-id",
+    "scm[_a-z-]*",
+    "cv",
+    "af",
+    "mall_affr",
+    "sk",
+    "dp",
+    "terminal_id",
+    "aff_request_id",
+]
+redirections = []
+
+[providers."wired.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?wired\.com'
+rules = ["intcid"]
+redirections = []
+
+[providers."medium.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?medium\.com'
+rules = ["source"]
+redirections = []
+
+[providers.twitter]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?twitter.com'
+rules = [
+    "(?:ref_?)?src",
+    "s",
+    "cn",
+    "ref_url",
+    "t",
+]
+redirections = []
+
+[providers."telekom.de"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?telekom\.de'
+rules = []
+redirections = ['^https?:\/\/aaa\.telekom\.de\/trck\/.*?deeplinkurl=([^&]+)']
+
+[providers.sohu]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?sohu\.com'
+rules = [
+    "pvid",
+    "scm",
+]
+redirections = []
+
+[providers.ebay]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?ebay(?:\.[a-z]{2,}){1,}'
+rules = [
+    "_trkparms",
+    "_trksid",
+    "_from",
+    "hash",
+]
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?rover\.ebay(?:\.[a-z]{2,}){1,}\/rover.*mpre=([^&]*)']
+
+[providers."magento.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?magento\.com'
+rules = [
+    "itm_campaign",
+    "itm_medium",
+    "itm_source",
+    "itm_term",
+]
+redirections = []
+
+[providers."moosejaw.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?moosejaw\.com'
+rules = [
+    "cm_lm",
+    "cm_mmc",
+    "webUserId",
+    "spMailingID",
+    "spUserID",
+    "spJobID",
+    "spReportId",
+]
+redirections = []
+
+[providers."swp.de"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?swp\.de'
+rules = ["source"]
+redirections = []
+
+[providers."thunderbird.net"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?thunderbird\.net'
+rules = ["src"]
+redirections = []
+
+[providers."agata88.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?agata88\.com'
+rules = ["source"]
+redirections = []
+
+[providers."redfin.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?redfin\.com'
+rules = ["riftinfo"]
+redirections = []
+
+[providers."yle.fi"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?yle\.fi'
+rules = ["origin"]
+redirections = []
+
+[providers."giphy.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?giphy\.com'
+rules = ["ref"]
+redirections = []
+
+[providers."curseforge.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?curseforge\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?curseforge\.com\/linkout\?remoteUrl=([^&]*)']
+
+[providers."roblox.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?roblox\.com'
+rules = ["refPageId"]
+redirections = []
+
+[providers."billiger.de"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?billiger\.de'
+rules = [
+    "log",
+    "p",
+]
+redirections = []
+
+[providers.bing]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?bing(?:\.[a-z]{2,}){1,}'
+rules = [
+    "cvid",
+    "sk",
+    "sp",
+    "sc",
+    "qs",
+    "qp",
+    "form",
+]
+redirections = []
+
+[providers.weibo]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?weibo\.(cn|com)'
+rules = [
+    "weibo_id",
+    "dt_dapp",
+]
+redirections = []
+
+[providers."wps.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?wps\.com'
+rules = ["from"]
+redirections = []
+
+[providers."woot.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?woot\.com'
+rules = ["ref_?"]
+redirections = []
+
+[providers."awstrack.me"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?awstrack\.me'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?awstrack\.me\/.*\/(https?.*?)\/']
+
+[providers."cell.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?cell\.com'
+rules = ["_returnURL"]
+redirections = []
+
+[providers.ClearURLsTest2]
+url_pattern = '^https?:\/\/test\.clearurls\.xyz\/void\/index\.html'
+rules = ["test"]
+redirections = ['^https?:\/\/test\.clearurls\.xyz\/void\/index\.html\?url=([^&]*)']
+
+[providers."cafepedagogique.net"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?cafepedagogique\.net'
+rules = [
+    "actId",
+    "actCampaignType",
+    "actSource",
+]
+redirections = []
+
+[providers.vivaldi]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?vivaldi\.com'
+rules = [
+    "pk_campaign",
+    "pk_kwd",
+]
+redirections = []
+
+[providers."gate.sc"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?gate\.sc'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?gate\.sc\/.*?url=([^&]*)']
+
+[providers."prvnizpravy.cz"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?prvnizpravy\.cz'
+rules = ["xid"]
+redirections = []
+
+[providers."disq.us"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?disq\.us'
+rules = ["cuid"]
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?disq\.us\/.*?url=([^&]*)%3A']
+
+[providers."europe1.fr"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?europe1\.fr'
+rules = ["xtor"]
+redirections = []
+
+[providers."messenger.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?messenger\.com'
+rules = []
+redirections = ['^https?:\/\/l\.messenger\.com\/l\.php\?u=([^&]*)']
+
+[providers."office-partner.de"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?office-partner\.de'
+rules = [
+    "sPartner",
+    "campaign",
+]
+redirections = []
+
+[providers.steamcommunity]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?steamcommunity\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?steamcommunity\.com\/linkfilter\/\?url=([^&]*)']
+
+[providers."diepresse.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?diepresse\.com'
+rules = [
+    "from",
+    "xtor",
+    "xt_at",
+]
+redirections = []
+
+[providers."etsy.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?etsy\.com'
+rules = [
+    "click_key",
+    "click_sum",
+    "organic_search_click",
+]
+redirections = []
+
+[providers."realtor.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?realtor\.com'
+rules = [
+    "ex",
+    "identityID",
+    "MID",
+    "RID",
+]
+redirections = []
+
+[providers."readdc.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?readdc\.com'
+rules = ["ref"]
+redirections = []
+
+[providers.flipkart]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?flipkart\.com'
+rules = [
+    "otracker.?",
+    "ssid",
+    "[cilp]id",
+    "marketplace",
+    "store",
+    "srno",
+    "store",
+    "ppn",
+    "ppt",
+    "fm",
+    "collection-tab-name",
+    'sattr\[\]',
+    'p\[\]',
+    "st",
+    "qH",
+    "hpid",
+    "ctx",
+    "nnc",
+]
+redirections = []
+
+[providers.mercadolibre]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?mercadoli[bv]re\.com'
+rules = [
+    "DEAL_ID",
+    "L",
+    "S",
+    "T",
+    "V",
+    "pdp_filters",
+    "position",
+    "search_layout",
+    "tracking_id",
+    "type",
+    "c_[_a-zA-Z]+",
+    'me\.[_a-zA-Z]+',
+    "reco_[_a-zA-Z]+",
+    "ad_click_id",
+]
+redirections = []
+
+[providers."vk.com"]
+url_pattern = '^https?:\/\/vk\.com'
+rules = []
+redirections = ['^https?:\/\/vk\.com\/away\.php\?to=([^&]*)']
+
+[providers."skimresources.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?skimresources\.com'
+rules = []
+redirections = ['^https?:\/\/go\.skimresources\.com\/.*?url=([^&]+)']
+
+[providers."teletrader.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?teletrader\.com'
+rules = ["internal"]
+redirections = []
+
+[providers."walmart.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?walmart\.com'
+rules = [
+    "u1",
+    "ath[a-z]*",
+]
+redirections = []
+
+[providers."thetimes.co.uk"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?thetimes\.co\.uk'
+rules = ["shareToken"]
+redirections = []
+
+[providers."cnbc.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?cnbc\.com'
+rules = ["__source"]
+redirections = []
+
+[providers."idealo.de"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?idealo\.de'
+rules = [
+    "sid",
+    "src",
+    "siteId",
+    "lcb",
+    "leadOutUrl",
+    "offerListId",
+    "osId",
+    "cancelUrl",
+    "disc",
+]
+redirections = []
+
+[providers.x]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?x.com'
+rules = [
+    "(?:ref_?)?src",
+    "s",
+    "cn",
+    "ref_url",
+    "t",
+]
+redirections = []
+
+[providers."deviantart.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?deviantart\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?deviantart\.com\/.*?\/outgoing\?(.*)']
+
+[providers."anonym.to"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?anonym\.to'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?anonym\.to.*\?([^&]*)']
+
+[providers.global]
+rules = [
+    "(?:%3F)?utm(?:_[a-z_]*)?",
+    "(?:%3F)?mtm(?:_[a-z_]*)?",
+    "(?:%3F)?ga_[a-z_]+",
+    "(?:%3F)?yclid",
+    "(?:%3F)?_openstat",
+    "(?:%3F)?fb_action_(?:types|ids)",
+    "(?:%3F)?fb_(?:source|ref)",
+    "(?:%3F)?fbclid",
+    "(?:%3F)?action_(?:object|type|ref)_map",
+    "(?:%3F)?gs_l",
+    "(?:%3F)?mkt_tok",
+    "(?:%3F)?hmb_(?:campaign|medium|source)",
+    "(?:%3F)?gclid",
+    "(?:%3F)?srsltid",
+    "(?:%3F)?otm_[a-z_]*",
+    "(?:%3F)?cmpid",
+    "(?:%3F)?os_ehash",
+    "(?:%3F)?_ga",
+    "(?:%3F)?_gl",
+    "(?:%3F)?__twitter_impression",
+    "(?:%3F)?wt_?z?mc",
+    "(?:%3F)?wtrid",
+    "(?:%3F)?[a-z]?mc",
+    "(?:%3F)?dclid",
+    "Echobox",
+    "(?:%3F)?spm",
+    "(?:%3F)?vn(?:_[a-z]*)+",
+    "(?:%3F)?tracking_source",
+    "(?:%3F)?ceneo_spo",
+    "(?:%3F)?itm_(?:campaign|medium|source)",
+    "(?:%3F)?__hsfp",
+    "(?:%3F)?__hssc",
+    "(?:%3F)?__hstc",
+    "(?:%3F)?_hsenc",
+    "(?:%3F)?__s",
+    "(?:%3F)?hsCtaTracking",
+    "(?:%3F)?mc_(?:eid|cid|tc)",
+    "(?:%3F)?ml_subscriber",
+    "(?:%3F)?ml_subscriber_hash",
+    "(?:%3F)?msclkid",
+    "(?:%3F)?oly_anon_id",
+    "(?:%3F)?oly_enc_id",
+    "(?:%3F)?rb_clickid",
+    "(?:%3F)?s_cid",
+    "(?:%3F)?vero_conv",
+    "(?:%3F)?vero_id",
+    "(?:%3F)?wickedid",
+    "(?:%3F)?twclid",
+    "(?:%3F)?ref_?",
+    "(?:%3F)?referrer",
+]
+redirections = []
+
+[providers."metro.co.uk"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?metro\.co\.uk'
+rules = ["ito"]
+redirections = []
+
+[providers.techcrunch]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?techcrunch\.com'
+rules = [
+    "ncid",
+    "sr",
+    "sr_share",
+    "guccounter",
+    "guce_referrer",
+    "guce_referrer_sig",
+]
+redirections = []
+
+[providers."tiktok.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?tiktok\.com'
+rules = [
+    "u_code",
+    "preview_pb",
+    "_d",
+    "_t",
+    "_r",
+    "timestamp",
+    "user_id",
+    "share_app_name",
+    "share_iid",
+    "source",
+]
+redirections = []
+
+[providers."taobao.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?taobao\.com'
+rules = [
+    "price",
+    "sourceType",
+    "suid",
+    "ut_sk",
+    "un",
+    "share_crt_v",
+    "sp_tk",
+    "cpp",
+    "shareurl",
+    "short_name",
+    "app",
+    "scm[_a-z-]*",
+    "pvid",
+    "algo_expid",
+    "algo_pvid",
+    "ns",
+    "abbucket",
+    "ali_refid",
+    "ali_trackid",
+    "acm",
+    "utparam",
+    "pos",
+    "abtest",
+    "trackInfo",
+    "utkn",
+    "scene",
+    "mytmenu",
+    "turing_bucket",
+    "lygClk",
+    "impid",
+    "bftTag",
+    "bftRwd",
+    "spm",
+    "_u",
+]
+redirections = []
+
+[providers."exactag.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?exactag\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?exactag\.com.*url=([^&]*)']
+
+[providers."space.bilibili.com"]
+url_pattern = '^https?:\/\/space\.bilibili\.com'
+rules = ["spm_id_from"]
+redirections = []
+
+[providers.amazon]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?amazon(?:\.[a-z]{2,}){1,}'
+rules = [
+    "p[fd]_rd_[a-z]*",
+    "qid",
+    "srs?",
+    "__mk_[a-z]{1,3}_[a-z]{1,3}",
+    "spIA",
+    "ms3_c",
+    "[a-z%0-9]*ie",
+    "refRID",
+    "colii?d",
+    "[^a-z%0-9]adId",
+    "qualifier",
+    "_encoding",
+    "smid",
+    "field-lbr_brands_browse-bin",
+    "ref_?",
+    "th",
+    "sprefix",
+    "crid",
+    "keywords",
+    "cv_ct_[a-z]+",
+    "linkCode",
+    "creativeASIN",
+    "ascsubtag",
+    "aaxitk",
+    "hsa_cr_id",
+    "sb-ci-[a-z]+",
+    "rnid",
+    "dchild",
+    "camp",
+    "creative",
+    "content-id",
+    "dib",
+    "dib_tag",
+    "social_share",
+    "starsLeft",
+    "skipTwisterOG",
+    "tag",
+    "ascsubtag",
+]
+redirections = []
+
+[providers."artefact.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?artefact\.com'
+rules = []
+redirections = ['^https?:\/\/.*?artefact\.com\/trck\/.*?deeplinkurl=([^&]+)']
+
+[providers."hlserve.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?hlserve\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?hlserve\.com.*dest=([^&]*)']
+
+[providers."nova.cz"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?nova\.cz'
+rules = [
+    "sznclid",
+    "dop_ab_variant",
+    "dop_source_zone_name",
+    "dop_req_id",
+    "dop_id",
+]
+redirections = []
+
+[providers.reddit]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?reddit.com'
+rules = [
+    "%24deep_link",
+    '\$deep_link',
+    "correlation_id",
+    "ref_campaign",
+    "ref_source",
+    "%243p",
+    "rdt",
+    '\$3p',
+    "%24original_url",
+    '\$original_url',
+    "_branch_match_id",
+    "share_id",
+]
+redirections = [
+    '^https?:\/\/out\.reddit\.com\/.*?url=([^&]*)',
+    '^https?:\/\/click\.redditmail\.com\/.*?url=([^&]*)',
+]
+
+[providers."net-parade.it"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?net\-parade\.it'
+rules = ["pl"]
+redirections = []
+
+[providers."allrecipes.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?allrecipes\.com'
+rules = [
+    "internalSource",
+    "referringId",
+    "referringContentType",
+    "clickId",
+]
+redirections = []
+
+[providers."srvtrck.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?srvtrck\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?srvtrck\.com.*url=([^&]*)']
+
+[providers."dailycodingproblem.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?dailycodingproblem\.com'
+rules = ["email"]
+redirections = []
+
+[providers."partner-ads.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?partner-ads\.com'
+rules = []
+redirections = ['^https?:\/\/.*?partner-ads\.com\/.*?htmlurl=([^&]+)']
+
+[providers."onet.pl"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?onet\.pl'
+rules = [
+    "srcc",
+    "utm_v",
+    "utm_medium",
+    "utm_source",
+]
+redirections = []
+
+[providers."site2.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?site2\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?site2\.com.*?\?.*=(.*)']
+
+[providers."aktualne.cz"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?aktualne\.cz'
+rules = [
+    "dop_ab_variant",
+    "dop_source_zone_name",
+    "dop_req_id",
+    "dop_id",
+]
+redirections = []
+
+[providers."humblebundle.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?humblebundle\.com'
+rules = ["partner"]
+redirections = []
+
+[providers."ozon.ru"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?ozon\.ru'
+rules = ["partner"]
+redirections = []
+
+[providers."site3.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?site3\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?site3\.com.*?\?r=([^&]*)']
+
+[providers."eonline.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?eonline\.com'
+rules = [
+    "source",
+    "medium",
+    "content",
+]
+redirections = []
+
+[providers."gamespot.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?gamespot\.com'
+rules = [
+    "PostType",
+    "ServiceType",
+    "ftag",
+    "UniqueID",
+    "TheTime",
+]
+redirections = []
+
+[providers.yandex]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?(?:yandex(?:\.[a-z]{2,}){1,}|ya\.ru)'
+rules = [
+    "lr",
+    "redircnt",
+]
+redirections = []
+
+[providers."tb.cn"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?tb\.cn'
+rules = ["sm"]
+redirections = []
+
+[providers."tmall.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?tmall\.com'
+rules = [
+    "price",
+    "sourceType",
+    "suid",
+    "ut_sk",
+    "un",
+    "share_crt_v",
+    "sp_tk",
+    "cpp",
+    "shareurl",
+    "short_name",
+    "app",
+    "scm[_a-z-]*",
+    "pvid",
+    "algo_expid",
+    "algo_pvid",
+    "ns",
+    "abbucket",
+    "ali_refid",
+    "ali_trackid",
+    "acm",
+    "utparam",
+    "pos",
+    "abtest",
+    "trackInfo",
+    "user_number_id",
+    "utkn",
+    "scene",
+    "mytmenu",
+    "turing_bucket",
+    "lygClk",
+    "impid",
+    "bftTag",
+    "bftRwd",
+    "activity_id",
+]
+redirections = []
+
+[providers."zoho.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?zoho\.com'
+rules = ["iref"]
+redirections = []
+
+[providers."pantip.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?pantip\.com'
+rules = []
+redirections = []
+
+[providers."forbes.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?forbes\.com'
+rules = ["sh"]
+redirections = []
+
+[providers.shopee]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?shopee\.(com|co\.th|tw)'
+rules = [
+    "publish_id",
+    "sp_atk",
+    "xptdk",
+]
+redirections = []
+
+[providers.airbnb]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?airbnb\.(com|ae|ca|co\.in|co\.nz|co\.uk|co\.za|com\.au|com\.mt|com\.sg|de|gy|ie)'
+rules = [
+    "federated_search_id",
+    "search_type",
+    "source",
+    "source_impression_id",
+]
+redirections = []
+
+[providers.nikkei]
+url_pattern = '^https?://(?:[a-z0-9-]+\.)*?nikkei\.co(?:m|\.jp)'
+rules = [
+    "adid",
+    "i_cid",
+    "n_cid",
+    "waad",
+]
+redirections = []
+
+[providers."href.li"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?href\.li'
+rules = []
+redirections = ['^https?:\/\/href\.li\/\?(http.+)']
+
+[providers."nytimes.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?nytimes\.com'
+rules = ["smid"]
+redirections = []
+
+[providers."support.mozilla.org"]
+url_pattern = '^https?:\/\/(?:support\.)?mozilla\.org'
+rules = ["as"]
+redirections = []
+
+[providers."alabout.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?alabout\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?alabout\.com.*url=([^&]*)']
+
+[providers."mailpanion.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?mailpanion\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?mailpanion\.com.*destination=([^&]*)']
+
+[providers.msn]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?msn\.com'
+rules = [
+    "cvid",
+    "ocid",
+]
+redirections = []
+
+[providers.hhdotru]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?hh\.ru'
+rules = [
+    "vss",
+    "t",
+    "swnt",
+    "grpos",
+    "ptl",
+    "stl",
+    "exp",
+    "plim",
+]
+redirections = []
+
+[providers."govdelivery.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?govdelivery\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?links\.govdelivery\.com.*\/track\?.*(https?:\/\/.*)']
+
+[providers."healio.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?healio\.com'
+rules = [
+    "ecp",
+    "m_bt",
+]
+redirections = []
+
+[providers."bigfishgames.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?bigfishgames\.com'
+rules = [
+    "pc",
+    "npc",
+    "npv[0-9]+",
+    "npi",
+]
+redirections = []
+
+[providers."idealo-partner.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?idealo-partner\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?idealo-partner\.com.*trg=([^&]*)']
+
+[providers.ClearURLsTest]
+url_pattern = '^https?:\/\/kevinroebert\.gitlab\.io\/ClearUrls\/void\/index\.html'
+rules = ["test"]
+redirections = ['^https?:\/\/kevinroebert\.gitlab\.io\/ClearUrls\/void\/index\.html\?url=([^&]*)']
+
+[providers.instagram]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?instagram\.com'
+rules = [
+    "igshid",
+    "igsh",
+]
+redirections = [".*u=([^&]*)"]
+
+[providers."80000hours.org"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?80000hours\.org'
+rules = ["int_campaign"]
+redirections = []
+
+[providers."faei.cz"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?faei\.cz'
+rules = [
+    "sznclid",
+    "dop_ab_variant",
+    "dop_source_zone_name",
+    "dop_req_id",
+    "dop_id",
+]
+redirections = []
+
+[providers."adform.net"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?adform\.net'
+rules = []
+redirections = ['^https?:\/\/track\.adform\.net\/C\/.*?ckurl=([^&]+)']
+
+[providers."meetup.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?meetup\.com'
+rules = [
+    "rv",
+    "_xtd",
+]
+redirections = []
+
+[providers."ccbill.com"]
+url_pattern = '^https?:\/\/refer\.ccbill\.com'
+rules = []
+redirections = ['^https?:\/\/refer\.ccbill\.com.*HTML=([^&]*)']
+
+[providers."epicgames.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?epicgames\.com'
+rules = [
+    "epic_affiliate",
+    "epic_gameId",
+]
+redirections = []
+
+[providers."9gag.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?9gag\.com'
+rules = ["ref"]
+redirections = []
+
+[providers."goodreads.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?goodreads\.com'
+rules = [
+    "from_search",
+    "from_srp",
+    "qid",
+    "rank",
+    "ac",
+]
+redirections = []
+
+[providers."wkorea.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?wkorea\.com'
+rules = [
+    "ddw",
+    "ds_ch",
+]
+redirections = []
+
+[providers."imgsrc.ru"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?imgsrc\.ru'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?dlp\.imgsrc\.ru\/go\/\d+\/\d+\/\d+\/([^&]*)']
+
+[providers.googleadservices]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?googleadservices\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?googleadservices\.com\/.*?adurl=([^&]*)']
+
+[providers."accounts.firefox.com"]
+url_pattern = '^https?:\/\/(?:accounts\.)?firefox\.com'
+rules = [
+    "entrypoint",
+    "form_type",
+]
+redirections = []
+
+[providers."bahn.de"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?bahn\.de'
+rules = ["dbkanal_[0-9]{3}"]
+redirections = []
+
+[providers."seznamzpravy.cz"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?seznamzpravy\.cz'
+rules = [
+    "dop_ab_variant",
+    "dop_source_zone_name",
+    "dop_req_id",
+    "dop_id",
+    "source",
+    "seq_no",
+]
+redirections = []
+
+[providers."webgains.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?webgains\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?webgains\.com.*wgtarget=([^&]*)']
+
+[providers."mozaws.net"]
+url_pattern = 'https?:\/\/outgoing\.prod\.mozaws\.net\/'
+rules = []
+redirections = ['https?:\/\/[^/]+\/v1\/[0-9a-f]{64}\/(.*)']
+
+[providers."live.bilibili.com"]
+url_pattern = '^https?:\/\/live\.bilibili\.com'
+rules = [
+    "visit_id",
+    "session_id",
+    "broadcast_type",
+    "is_room_feed",
+]
+redirections = []
+
+[providers."viglink.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?viglink\.com'
+rules = []
+redirections = ['^https?:\/\/redirect\.viglink\.com\/.*?u=([^&]+)']
+
+[providers.facebook]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?facebook\.com'
+rules = [
+    'hc_[a-z_%\[\]0-9]*',
+    "[a-z]*ref[a-z]*",
+    "__tn__",
+    "eid",
+    '__(?:xts|cft)__(?:\[|%5B)\d(?:\]|%5D)',
+    "comment_tracking",
+    "dti",
+    "app",
+    "video_source",
+    "ftentidentifier",
+    "pageid",
+    "padding",
+    "ls_ref",
+    "action_history",
+    "tracking",
+    "referral_code",
+    "referral_story_type",
+    "eav",
+    "sfnsn",
+    "idorvanity",
+    "wtsid",
+    "rdc",
+    "rdr",
+    "paipv",
+    "_nc_x",
+    "_rdr",
+    "mibextid",
+]
+redirections = ['^https?:\/\/l[a-z]?\.facebook\.com/l\.php\?.*?u=(https?%3A%2F%2F[^&]*)']
+
+[providers."imdb.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?imdb\.com'
+rules = [
+    "ref_",
+    "pf_rd_[a-z]*",
+]
+redirections = []
+
+[providers."apple.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?apple\.com'
+rules = [
+    "app",
+    "ign-itsc[a-z]+",
+]
+redirections = []
+
+[providers."nordwolle.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?nordwolle\.com'
+rules = [
+    "_sc",
+    "_sid",
+    "_ss",
+]
+redirections = []
+
+[providers."fiverr.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?fiverr\.com'
+rules = [
+    "context_referrer",
+    "source",
+    "ref_ctx_id",
+    "funnel",
+]
+redirections = []
+
+[providers."deeplearning.ai"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?deeplearning\.ai'
+rules = [
+    "ecid",
+    "_hsmi",
+    "_hsenc",
+]
+redirections = []
+
+[providers."digidip.net"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?digidip\.net'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?digidip\.net.*url=([^&]*)']
+
+[providers."backcountry.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?backcountry\.com'
+rules = [
+    "CMP_SKU",
+    "MER",
+    "mr:trackingCode",
+    "mr:device",
+    "mr:adType",
+    "iv_",
+    "CMP_ID",
+    "k_clickid",
+    "rmatt",
+    "INT_ID",
+    "ti",
+    "fl",
+    "mr:referralID",
+]
+redirections = []
+
+[providers."rutracker.org"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?rutracker\.org'
+rules = []
+redirections = [".*url=([^&]*)"]
+
+[providers."iprima.cz"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?iprima\.cz'
+rules = [
+    "sznclid",
+    "dop_ab_variant",
+    "dop_source_zone_name",
+    "dop_req_id",
+    "dop_id",
+]
+redirections = []
+
+[providers.indeed]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?indeed\.com'
+rules = [
+    "from",
+    "alid",
+    "[a-z]*tk",
+]
+redirections = []
+
+[providers."alibaba cloud arms"]
+url_pattern = '^https?:\/\/arms-retcode\.aliyuncs\.com'
+rules = [
+    "pid",
+    "uid",
+    "tag",
+    "release",
+    "environment",
+    "sample",
+    "behavior",
+    "enableSPA",
+    "enableLinkTrace",
+    "page",
+    "begin",
+    "c2",
+    "c3",
+    "success",
+    "code",
+    "msg",
+    "api",
+    "traceId",
+    "pv_id",
+    "flag",
+    "sr",
+    "vp",
+    "ct",
+    "_v",
+    "sampling",
+    "dl",
+    "post_res",
+]
+redirections = []
+
+[providers."mozillazine.org"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?mozillazine\.org'
+rules = ["sid"]
+redirections = []
+
+[providers."bilibili.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?bilibili\.com'
+rules = [
+    "callback",
+    "spm_id_from",
+    "from_source",
+    "from",
+    "seid",
+    "mid",
+    "share_source",
+    "msource",
+    "refer_from",
+    "share_from",
+    "share_medium",
+    "share_source",
+    "share_plat",
+    "share_tag",
+    "share_session_id",
+    "timestamp",
+    "unique_k",
+    "vd_source",
+    "plat_id",
+    "buvid",
+    "is_story_h5",
+    "up_id",
+]
+redirections = []
+
+[providers."bloculus.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?bloculus\.com'
+rules = ["tl_[a-z_]+"]
+redirections = []
+
+[providers."youku.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?youku\.com'
+rules = ["tpa"]
+redirections = []
+
+[providers."effiliation.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?effiliation\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?effiliation\.com.*url=([^&]*)']
+
+[providers.tweakers]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?tweakers\.net'
+rules = [
+    "nb",
+    "u",
+]
+redirections = []
+
+[providers.LinkedIn]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?linkedin\.com'
+rules = [
+    "refId",
+    "trk",
+    "li[a-z]{2}",
+    "trackingId",
+]
+redirections = []
+
+[providers."allegro.pl"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?allegro\.pl'
+rules = [
+    "reco_id",
+    "sid",
+]
+redirections = []
+
+[providers."admitad.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?admitad\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?admitad\.com.*ulp=([^&]*)']
+
+[providers."mysku.ru"]
+url_pattern = '^https?:\/\/mysku\.ru'
+rules = []
+redirections = ['^https?:\/\/mysku\.ru.*r=([^&]*)']
+
+[providers.lazada]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?lazada\.(com|co\.th|co\.id|com\.my|com\.ph|sg|vn)'
+rules = [
+    "clickTrackInfo",
+    "abid",
+    "pvid",
+    "ad_src",
+    "spm",
+    "src",
+    "from",
+    "scm",
+    "pa",
+    "pid_pvid",
+    "did",
+    "mp",
+    "cid",
+    "impsrc",
+    "pos",
+]
+redirections = []
+
+[providers."norml.org"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?norml\.org'
+rules = [
+    "link_id",
+    "can_id",
+    "source",
+    "email_referrer",
+    "email_subject",
+]
+redirections = []
+
+[providers."SPIEGEL ONLINE"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?spiegel\.de'
+rules = ["b"]
+redirections = []
+
+[providers."academic.oup.com"]
+url_pattern = '^https?:\/\/academic\.oup\.com'
+rules = ["redirectedFrom"]
+redirections = []
+
+[providers."tokopedia.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?tokopedia\.com'
+rules = [
+    "src",
+    "trkid",
+    "whid",
+]
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?tokopedia\.com\/promo.*r=([^&]*)']
+
+[providers.doubleclick]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?doubleclick(?:\.[a-z]{2,}){1,}'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?doubleclick(?:\.[a-z]{2,}){1,}\/.*?tag_for_child_directed_treatment=;%3F([^&]*)']
+
+[providers.quizlet]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?quizlet\.com'
+rules = ["funnelUUID"]
+redirections = []
+
+[providers."vitamix.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?vitamix\.com'
+rules = [
+    "_requestid",
+    "cid",
+    "dl",
+    "di",
+    "sd",
+    "bi",
+]
+redirections = []
+
+[providers."snapchat.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?snapchat\.com'
+rules = [
+    "sc_referrer",
+    "sc_ua",
+]
+redirections = []
+
+[providers."app.adjust.com"]
+url_pattern = '^https?:\/\/app\.adjust\.com'
+rules = []
+redirections = ['^https?:\/\/app\.adjust\.com.*redirect=([^&]*)']
+
+[providers.steampowered]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?steampowered\.com'
+rules = ["snr"]
+redirections = []
+
+[providers."zillow.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?zillow\.com'
+rules = ["rtoken"]
+redirections = []
+
+[providers."signtr.website"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?signtr\.website'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?signtr\.website.*redirect=([^&]*)']
+
+[providers."mailtrack.io"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?mailtrack\.io'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?mailtrack\.io.*url=([^&]*)']
+
+[providers."tchibo.de"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?tchibo\.de'
+rules = ["wbdcd"]
+redirections = []
+
+[providers.cnet]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?cnet\.com'
+rules = ["ftag"]
+redirections = []
+
+[providers."dpbolvw.net"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?dpbolvw\.net'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?dpbolvw\.net.*url=([^&]*)']
+
+[providers.google]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?google(?:\.[a-z]{2,}){1,}'
+rules = [
+    "ved",
+    "bi[a-z]*",
+    "gfe_[a-z]*",
+    "ei",
+    "source",
+    "gs_[a-z]*",
+    "site",
+    "oq",
+    "esrc",
+    "uact",
+    "cd",
+    "cad",
+    "gws_[a-z]*",
+    "atyp",
+    "vet",
+    "_u",
+    "je",
+    "dcr",
+    "ie",
+    "sei",
+    "sa",
+    "dpr",
+    "btn[a-z]*",
+    "usg",
+    "cd",
+    "cad",
+    "uact",
+    "aqs",
+    "sourceid",
+    "sxsrf",
+    "rlz",
+    "i-would-rather-use-firefox",
+    "pcampaignid",
+    "sca_(?:esv|upv)",
+    "iflsig",
+    "fbs",
+    "ictx",
+    "cshid",
+    "referrer",
+]
+redirections = [
+    '^https?:\/\/(?:[a-z0-9-]+\.)*?google(?:\.[a-z]{2,}){1,}\/url\?.*?(?:url|q)=(https?[^&]+)',
+    '^https?:\/\/(?:[a-z0-9-]+\.)*?google(?:\.[a-z]{2,}){1,}\/.*?adurl=([^&]+)',
+    '^https?:\/\/(?:[a-z0-9-]+\.)*?google(?:\.[a-z]{2,}){1,}\/amp\/s\/([^&]+)',
+]
+
+[providers."site.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?site\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?site\.com.*?\?to=([^&]*)']
+
+[providers."mozilla.org"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?mozilla\.org'
+rules = [
+    "src",
+    "platform",
+    "redirect_source",
+]
+redirections = []
+
+[providers."nypost.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?nypost\.com'
+rules = ["__twitter_impression"]
+redirections = []
+
+[providers.bbc]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?bbc\.com'
+rules = [
+    "xtor",
+    "at_[a-z_]+",
+]
+redirections = []
+
+[providers."bestbuy.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?bestbuy\.com'
+rules = [
+    "irclickid",
+    "irgwc",
+    "loc",
+    "acampID",
+    "mpid",
+    "intl",
+]
+redirections = []
+
+[providers."github.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?github\.com'
+rules = [
+    "email_token",
+    "email_source",
+]
+redirections = []
+
+[providers.netflix]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?netflix.com'
+rules = [
+    "trackId",
+    "tctx",
+    "jb[a-z]*?",
+]
+redirections = []
+
+[providers."amazon search"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?amazon(?:\.[a-z]{2,}){1,}\/s\?'
+rules = [
+    "p[fd]_rd_[a-z]*",
+    "qid",
+    "srs?",
+    "__mk_[a-z]{1,3}_[a-z]{1,3}",
+    "spIA",
+    "ms3_c",
+    "[a-z%0-9]*ie",
+    "refRID",
+    "colii?d",
+    "[^a-z%0-9]adId",
+    "qualifier",
+    "_encoding",
+    "smid",
+    "field-lbr_brands_browse-bin",
+    "ref_?",
+    "th",
+    "sprefix",
+    "crid",
+    "cv_ct_[a-z]+",
+    "linkCode",
+    "creativeASIN",
+    "ascsubtag",
+    "aaxitk",
+    "hsa_cr_id",
+    "sb-ci-[a-z]+",
+    "rnid",
+    "dchild",
+    "camp",
+    "creative",
+    "tag",
+]
+redirections = []
+
+[providers."smartredirect.de"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?smartredirect\.de'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?smartredirect\.de.*?url=([^&]*)']
+
+[providers."tradedoubler.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?tradedoubler\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?tradedoubler\.com.*(?:url|_td_deeplink)=([^&]*)']
+
+[providers.twitch]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?twitch\.com'
+rules = [
+    "tt_medium",
+    "tt_content",
+]
+redirections = []
+
+[providers."gog.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?gog\.com'
+rules = [
+    "track_click",
+    "link_id",
+]
+redirections = []
+
+[providers."ceneo.pl"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?ceneo\.pl'
+rules = ["tag"]
+redirections = []
+
+[providers."flexlinkspro.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?flexlinkspro\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?flexlinkspro\.com.*url=([^&]*)']
+
+[providers."xiaohongshu.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?xiaohongshu\.com'
+rules = [
+    "xhsshare",
+    "author_share",
+    "type",
+    "xsec_source",
+    "share_from_user_hidden",
+    "app_version",
+    "ignoreEngage",
+    "app_platform",
+    "apptime",
+    "appuid",
+    "shareRedId",
+    "share_id",
+    "exSource",
+    "verifyUuid",
+    "verifyType",
+    "verifyBiz",
+]
+redirections = []
+
+[providers."linksynergy.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?linksynergy\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?linksynergy\.com\/.*?murl=([^&]*)']
+
+[providers."m.bilibili.com"]
+url_pattern = '^https?:\/\/m\.bilibili\.com'
+rules = [
+    "bbid",
+    "ts",
+]
+redirections = []
+
+[providers."cc.loginfra.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?loginfra\.com'
+rules = []
+redirections = ['^https?:\/\/cc\.loginfra\.com\/.*?u=([^&]+)']
+
+[providers.duckduckgo]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?duckduckgo\.com'
+rules = []
+redirections = ['^https?:\/\/duckduckgo\.com\/l\/.*?uddg=([^&]+)']
+
+[providers."theguardian.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?theguardian\.com'
+rules = ["CMP"]
+redirections = []
+
+[providers."awin1.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?awin1\.com'
+rules = []
+redirections = ['^https?:\/\/.*?awin1\.com\/.*?ued=([^&]+)']
+
+[providers."reuters.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?reuters\.com'
+rules = ["taid"]
+redirections = []
+
+[providers."hs.fi"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?hs\.fi'
+rules = ["share"]
+redirections = []
+
+[providers."newsletter.lidl.com"]
+url_pattern = '^https?:\/\/newsletter\.lidl(?:\.[a-z]{2,}){1,}'
+rules = ["x"]
+redirections = []
+
+[providers."respekt.cz"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?respekt\.cz'
+rules = [
+    "sznclid",
+    "dop_ab_variant",
+    "dop_source_zone_name",
+    "dop_req_id",
+    "dop_id",
+]
+redirections = []
+
+[providers."autoplus.fr"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?autoplus\.fr'
+rules = [
+    "idprob",
+    "hash",
+    "sending_id",
+    "site_id",
+    "dr_tracker",
+]
+redirections = []
+
+[providers."newyorker.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?newyorker\.com'
+rules = [
+    "source",
+    "bxid",
+    "cndid",
+    "esrc",
+    "mbid",
+]
+redirections = []
+
+[providers."novinky.cz"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?novinky\.cz'
+rules = [
+    "dop_ab_variant",
+    "dop_source_zone_name",
+    "dop_req_id",
+    "dop_id",
+    "source",
+    "seq_no",
+]
+redirections = []
+
+[providers."LinkedIn Learning"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?linkedin\.com\/learning'
+rules = ["u"]
+redirections = []
+
+[providers."getpocket.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?getpocket\.com'
+rules = []
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?getpocket\.com.*url=([^&]*)']
+
+[providers."argos.co.uk"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?argos\.co\.uk'
+rules = [
+    "istCompanyId",
+    "istFeedId",
+    "istItemId",
+    "istBid",
+    "clickOrigin",
+]
+redirections = []
+
+[providers."marketscreener.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?marketscreener\.com'
+rules = [
+    "type_recherche",
+    "mots",
+    "noredirect",
+    "RewriteLast",
+    "lien",
+    "aComposeInputSearch",
+    "type_recherche_forum",
+    "add_mots",
+    "countview",
+]
+redirections = []
+
+[providers."mozgcp.net"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?mozgcp\.net'
+rules = []
+redirections = ['^https?:\/\/prod\.outgoing\.prod\.webservices\.mozgcp\.net\/v1\/.+?\/([^&]+)']
+
+[providers."kahoot.it"]
+url_pattern = '^https?://(?:[a-z0-9-]+\.)*?kahoot\.it'
+rules = ["refer_method"]
+redirections = []
+
+[providers.youtube]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?(youtube\.com|youtu\.be)'
+rules = [
+    "feature",
+    "gclid",
+    "kw",
+    "si",
+    "pp",
+]
+redirections = ['^https?:\/\/(?:[a-z0-9-]+\.)*?youtube\.com\/redirect?.*?q=([^&]*)']
+
+[providers."boredpanda.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?boredpanda\.com'
+rules = ["h"]
+redirections = []
+
+[providers."shutterstock.com"]
+url_pattern = 'https?:\/\/([a-z0-9-.]*\.)shutterstock\.com'
+rules = ["src"]
+redirections = []
+
+[providers."spotify.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?spotify\.com'
+rules = ["si"]
+redirections = []
+
+[providers."t.umblr.com"]
+url_pattern = '^https?:\/\/(?:[a-z0-9-]+\.)*?umblr\.com'
+rules = []
+redirections = ['^https?:\/\/t\.umblr\.com\/redirect\?z=([^&]+)']

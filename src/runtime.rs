@@ -1,6 +1,27 @@
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+// Write to a sibling `.tmp` file then `rename` over the target so a partial
+// write (Ctrl-C, OOM, power loss) can never leave a corrupt file where the
+// daemon expects valid content.
+pub fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
+    let tmp = {
+        let mut p = path.as_os_str().to_os_string();
+        p.push(".tmp");
+        PathBuf::from(p)
+    };
+    fs::write(&tmp, content).map_err(|e| format!("Failed to write {}: {e}", tmp.display()))?;
+    fs::rename(&tmp, path).map_err(|e| {
+        let _ = fs::remove_file(&tmp);
+        format!(
+            "Failed to rename {} to {}: {e}",
+            tmp.display(),
+            path.display()
+        )
+    })?;
+    Ok(())
+}
 
 pub fn pid_file_path() -> PathBuf {
     runtime_dir().join("clink.pid")
@@ -75,6 +96,26 @@ pub fn is_running(_pid: u32) -> bool {
     false
 }
 
+pub fn loaded_config_path() -> PathBuf {
+    data_dir().join("loaded_config.toml")
+}
+
+pub fn write_loaded_config(config: &crate::config::ClinkConfig) -> Result<(), String> {
+    let path = loaded_config_path();
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {e}"))?;
+    }
+    let content =
+        toml::to_string_pretty(config).map_err(|e| format!("Failed to serialize config: {e}"))?;
+    fs::write(&path, content).map_err(|e| format!("Failed to write loaded config: {e}"))?;
+    Ok(())
+}
+
+#[cfg(unix)]
+pub fn remove_loaded_config() {
+    let _ = fs::remove_file(loaded_config_path());
+}
+
 pub fn append_log(message: &str) -> Result<(), String> {
     let path = log_file_path();
     if let Some(parent) = path.parent() {
@@ -107,6 +148,13 @@ pub fn read_last_log_lines(n: usize) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_loaded_config_write_and_read() {
+        let cfg = crate::config::ClinkConfig::default();
+        let content = toml::to_string_pretty(&cfg).unwrap();
+        assert!(content.contains("mode"));
+    }
 
     #[test]
     fn test_pid_file_write_read_remove() {

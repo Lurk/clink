@@ -33,6 +33,7 @@ Running `clink` with no subcommand starts the clipboard monitor daemon.
 | `clink reload` | Reload configuration of the running instance        |
 | `clink restart` | Restart the running instance                       |
 | `clink state` | Show current state and last log entries               |
+| `clink update` | Fetch and cache remote patterns                |
 
 ### Global options
 
@@ -61,6 +62,7 @@ clink uninstall
 clink state     # Check if clink is running and view recent log
 clink reload    # Reload config without restarting
 clink restart   # Stop the running instance
+clink update    # Fetch and cache remote patterns
 ```
 
 ## Config
@@ -76,105 +78,50 @@ Default path:
 
 On the first run, clink will create the default config in the path.
 
+If you have an old config with flat `params` and `exit` arrays, clink will auto-migrate it to the provider-based format on first run. A backup of the old config is saved as `config.toml.backup`.
+
+Tracking rules ship built in (sourced from [ClearURLs](https://docs.clearurls.xyz) under LGPL-3.0) and are embedded in the binary. Your `config.toml` only needs to hold runtime settings and any custom providers you want to add on top.
+
 Default config:
 
 ```toml
-# You can find detailed description of modes below
-# one of: remove, replace, your_mom, evil
+# Clink configuration
+# https://github.com/Lurk/clink
+
+# Processing mode for tracking parameters:
+#   remove   — strip tracking params from URLs
+#   replace  — replace param values with `replace_to` text
+#   your_mom — remove params + add utm_source=your_mom (except Mother's Day)
+#   evil     — randomly swap characters in tracking param values
 mode = 'remove'
-# Text for replace mode
+
+# Replacement text used in 'replace' mode
 replace_to = 'clink'
-# How often Clink will check clipboard in milliseconds
+
+# How often clink checks the clipboard, in milliseconds
 sleep_duration = 150
-# Which GET params Clink should update
-params = [
-    # Google
-    'dclid', # DoubleClick click identifier
-    'gclid', # Google Ads click identifier
-    'gclsrc', # Google Ads source
-    '_ga', # Google Analytics cross-domain
-    '_gl', # Google Analytics linker
-    # Meta (Facebook/Instagram)
-    'fbclid', # Facebook click identifier
-    'igshid', # Instagram share identifier
-    # Microsoft/Bing
-    'msclkid', # Microsoft Ads click identifier
-    # Twitter/X
-    'twclid', # Twitter click identifier
-    # TikTok
-    'ttclid', # TikTok click identifier
-    # LinkedIn
-    'li_fat_id', # LinkedIn first-party ad tracking
-    # Yandex
-    'yclid', # Yandex click identifier
-    # UTM family
-    'utm_id',
-    'utm_source',
-    'utm_source_platform',
-    'utm_creative_format',
-    'utm_campaign',
-    'utm_medium',
-    'utm_term',
-    'utm_content',
-    # Awin (formerly Zanox)
-    'zanpid',
-    # Email/marketing platforms
-    'mc_cid', # Mailchimp campaign ID
-    'mc_eid', # Mailchimp email ID
-    '_hsenc', # HubSpot tracking
-    '_hsmi', # HubSpot tracking
-    'mkt_tok', # Marketo token
-    '__s', # Drip email tracking
-    '_openstat', # Openstat
-    'vero_id', # Vero tracking
-    'spm', # Alibaba/AliExpress tracking
-    # Domain-specific params using "{domain}``{param}" pattern
-    "youtube.com``si",
-    "youtu.be``si",
-    "music.youtube.com``si",
-    # Amazon tracking params — pattern expands to 210 domain/param combinations
-    "amazon.(com|de|co.uk|co.jp|fr|it|es|ca|com.au|com.br|com.mx|nl|pl|se|sg|in|com.be|com.tr|eg|sa|ae)``(sp_csd|pd_rd_w|pd_rd_wg|pd_rd_i|pd_rd_r|pf_rd_r|pf_rd_p|t|psc|content-id)",
-]
-# Which exit params in URL should be unwrapped
-exit = [
-    [
-        "vk.com/away.php",
-        "to",
-    ],
-    [
-        "exit.sc/",
-        "url",
-    ],
-    [
-        "facebook.com/(l|confirmemail|login).php",
-        "u",
-        "next",
-    ],
-    [
-        "(www.|)(encrypted.|)google.(at|be|ca|ch|co.(bw|il|in|jp|nz|uk|za)|com(|.(ar|au|br|eg|mx|sg|tr|tw))|cl|de|dk|es|fr|it|nl|pl|pt|ru|se)/url",
-        "url",
-    ],
-    [
-        "bing.com/ck/a",
-        "u",
-    ],
-    [
-        "l.instagram.com/",
-        "u",
-    ],
-    [
-        "youtube.com/redirect",
-        "q",
-    ],
-    [
-        "linkedin.com/authwall",
-        "sessionRedirect",
-    ],
-    [
-        "mora.jp/cart",
-        "returnUrl",
-    ],
-]
+
+# Built-in tracking rules ship with clink (sourced from ClearURLs, LGPL-3.0)
+# and are embedded in the binary. Run `clink update` to fetch the latest.
+#
+# The providers below ship as defaults — they cover redirectors and rules
+# that the ClearURLs snapshot doesn't. Edit, remove, or add your own.
+
+[providers.exitsc]
+url_pattern = '^https?://exit\.sc'
+redirections = ['^https?://exit\.sc/\?.*?url=([^&]+)']
+
+# ...plus google, facebook, instagram, bing, youtube, linkedin, mora, amazon
+
+# Fetch providers from a remote URL. Must be https — `clink update` rejects
+# plaintext http and other schemes so a network attacker can't swap the rule
+# set or have the daemon read arbitrary local files via file:// URLs.
+# Supported formats:
+#   clearurls — ClearURLs data.min.json (https://docs.clearurls.xyz/1.26.1/specs/rules/)
+#   clink     — native clink TOML format
+[remote]
+url = 'https://rules2.clearurls.xyz/data.min.json'
+format = 'clearurls'
 ```
 
 ### mode
@@ -195,40 +142,76 @@ This is the value that will be used in replace mode
 Sleep duration between clipboard data pulls in milliseconds. 
 
 
-### params
+### providers
 
-Array of GET query params to apply chosen mode. Params support the same group expansion syntax as exit entries — e.g., `(foo|bar)` expands to both `foo` and `bar`. Patterns are expanded at config load time.
+The config is organized around providers. Each provider groups rules and redirections that apply to a specific domain (or globally). A provider can have:
 
-### exit
+* `url_pattern` — a regex that the URL must match for this provider to apply. Omit it (as in `providers.global`) to match all URLs.
+* `rules` — an array of param names to strip from matching URLs.
+* `redirections` — an array of regexes used to unwrap redirect/exit URLs (see below).
+* `exceptions` — an array of regexes that exclude URLs from the provider. If a URL matches any exception, neither `rules` nor `redirections` fire for it.
 
-Array of exit links to unwrap. Every element is also an array where first element is a URL in a simplified regular
-expression and all others are query params that can contain exit URL.
+Matching follows ClearURLs semantics: every regex is matched case-insensitively, and entries in `rules` are anchored to the full parameter name (i.e. `(?:ref_?)?src` matches `src`, `refsrc`, `ref_src` — not `srcset`). `url_pattern`, `redirections`, and `exceptions` are not anchored.
+
+The `providers.global` provider has no `url_pattern`, so its rules apply to every URL. Domain-specific providers like `providers.youtube` or `providers.amazon` only fire when the URL matches their `url_pattern`.
+
+The template generated by `clink init` ships a handful of clink-curated providers (exit.sc, mora.jp, the explicit Amazon rules, etc.) that the ClearURLs snapshot doesn't cover. The bulk of common tracking rules — `fbclid`, `gclid`, `utm_*`, and so on — comes from the embedded ClearURLs snapshot. Anything you add to `[providers.*]` in your `config.toml` is merged on top of the built-ins. Running `clink update` replaces the built-ins with a fresher snapshot cached locally; the providers in your `config.toml` always apply regardless.
+
+### redirections
+
+Redirections unwrap exit/redirect URLs. Each entry is a regex with one capture group that extracts the destination URL.
 
 For example this URL: `https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjMuu2zrreBAxUt2gIHHaDVC_gQyCl6BAgqEAM&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ&usg=AOvVaw0aHtehaphMhOCAkCydRLZU&opi=89978449`, 
 
 Will be unwrapped to `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
 
-How does it work? 
+How does it work? The Google provider's redirection regex matches the URL and captures the `url` (or `q`) query param value:
 
-This exit entry: 
 ```toml
-    [
-        "(www.|)a.com/",
-        "u",
-        "next",
-    ],
+[providers.google]
+url_pattern = '^https?://([a-z0-9-]+\.)*?google\.[a-z]{2,}'
+redirections = ['^https?://[a-z0-9.-]*google\.[a-z.]+/url\?.*?(?:url|q)=([^&]+)']
 ```
 
-will unwrap:
-
-* `https://a.com/?u=...`
-* `https://www.a.com/?u=...`
-* `https://a.com/?next=...`
-* `https://www.a.com/?next=...`
-
-Keep in mind that you do not need to have `https` and/or `http` in exit link definition. 
+The `url_pattern` ensures this redirection only fires on Google domains. The regex in `redirections` captures everything after `url=` or `q=` (up to the next `&`) as the destination URL.
 
 This feature is heavily inspired by [musicbrainz-bot](https://github.com/Freso/musicbrainz-bot/blob/82e37124cdea83f639d133136809fcb898a3ff2b/exit_url_cleanup.py#L19-L38)
+
+### remote
+
+Fetch providers from a remote URL. Remote providers serve as a base;
+your local providers are merged on top.
+
+By default, clink uses [ClearURLs](https://docs.clearurls.xyz) as the remote source:
+
+```toml
+[remote]
+url = 'https://rules2.clearurls.xyz/data.min.json'
+format = 'clearurls'
+```
+
+Supported formats:
+- `clearurls` — [ClearURLs](https://docs.clearurls.xyz) `data.min.json` (LGPLv3, maintained by Kevin R. / AMinber). ClearURLs rules map 1:1 to providers — domain scoping, regex rules, and redirections all come through.
+- `clink` — clink-native TOML with providers
+
+To fetch the remote patterns, run:
+
+```sh
+clink update
+```
+
+This fetches the remote patterns and caches them locally. Run `clink update` again
+whenever you want to pull the latest version. Then `clink reload` to apply.
+
+To disable remote patterns, remove the `[remote]` section from the config.
+
+### Lookalike-host caveat
+
+ClearURLs ships host patterns shaped like `^https?://(?:[a-z0-9-]+\.)*?change\.org`, which don't anchor the end of the host. A URL such as `https://change.org.attacker.com/?source_location=x` therefore matches the `change.org` provider, and clink will strip `source_location` before pasting.
+
+This is a clipboard mangling, not a leak: nothing is sent anywhere, and the URL still resolves to `attacker.com` — just with one fewer query param. clink-curated providers in the default config (`amazon`, `exit.sc`, ...) anchor host end with `(?:[/:?#]|$)` and aren't affected; the issue is specific to the imported ClearURLs snapshot.
+
+If you hit a case that bothers you, send a PR to [ClearURLs/Rules](https://github.com/ClearURLs/Rules) tightening the offending `urlPattern`; running `clink update` will pick it up.
 
 ## Build
 
@@ -247,3 +230,8 @@ Works right away
 
 Should work but not tested, yet.
 
+## Credits
+
+Clink's built-in tracking rules are derived from the [ClearURLs project](https://docs.clearurls.xyz/) and are licensed under the [LGPL-3.0](https://www.gnu.org/licenses/lgpl-3.0.txt). A translated snapshot of the ClearURLs ruleset is bundled at `src/builtin_patterns.toml` and embedded in every clink binary. Run `clink update` to fetch the latest ClearURLs rules into a user-local cache.
+
+See the top-level `NOTICE` file for the full attribution.

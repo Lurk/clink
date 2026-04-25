@@ -1,9 +1,14 @@
+mod builtin;
+mod clearurls;
 mod cli;
 mod clink;
 mod commands;
 mod config;
 mod expand_string;
+mod migration;
 mod mode;
+mod provider;
+mod remote;
 mod runtime;
 mod service;
 #[cfg(unix)]
@@ -32,6 +37,9 @@ fn main() {
         Some(Command::State) => commands::state::execute(),
         Some(Command::Config { diff, reset }) => {
             commands::config::execute(&config_path, diff, reset)
+        }
+        Some(Command::Update { write_snapshot }) => {
+            commands::update::execute(&config_path, write_snapshot.as_deref())
         }
     };
 

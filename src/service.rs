@@ -100,7 +100,6 @@ mod platform {
 
 #[cfg(target_os = "linux")]
 mod platform {
-    use crate::runtime;
     use std::fs;
     use std::path::{Path, PathBuf};
     use std::process::Command;
@@ -116,7 +115,7 @@ mod platform {
         let config_arg = config_path.display();
 
         format!(
-            r#"[Unit]
+            r"[Unit]
 Description=Clean links copied to clipboard
 Documentation=https://github.com/Lurk/clink?tab=readme-ov-file#readme
 
@@ -145,7 +144,7 @@ RestrictRealtime=yes
 
 [Install]
 WantedBy=default.target
-"#
+"
         )
     }
 
@@ -209,6 +208,19 @@ WantedBy=default.target
 
         println!("Uninstalled systemd service. Removed {}", unit.display());
         Ok(())
+    }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+mod platform {
+    use std::path::Path;
+
+    pub fn install(_binary_path: &Path, _config_path: &Path) -> Result<(), String> {
+        Err("Service install is not supported on this platform.".to_string())
+    }
+
+    pub fn uninstall() -> Result<(), String> {
+        Err("Service uninstall is not supported on this platform.".to_string())
     }
 }
 

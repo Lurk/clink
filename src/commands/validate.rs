@@ -1,4 +1,7 @@
 use crate::config::load_config;
+use crate::provider::check_provider;
+use crate::remote::resolve_patterns;
+use crate::runtime;
 use std::path::Path;
 
 pub fn execute(config_path: &Path) -> Result<(), String> {
@@ -9,14 +12,23 @@ pub fn execute(config_path: &Path) -> Result<(), String> {
         ));
     }
 
-    let cfg = load_config(config_path)?;
-    let warnings = cfg.validate();
+    let mut cfg = load_config(config_path)?;
+    let mut warnings = cfg.validate();
+
+    warnings.extend(resolve_patterns(&mut cfg, &runtime::data_dir()));
+    for (name, p) in &cfg.providers {
+        warnings.extend(check_provider(name, p));
+    }
+
+    let rule_count: usize = cfg.providers.values().map(|p| p.rules.len()).sum();
+    let redirect_count: usize = cfg.providers.values().map(|p| p.redirections.len()).sum();
 
     println!("Config at {}:", config_path.display());
     println!("  Mode: {}", cfg.mode);
     println!("  Sleep duration: {}ms", cfg.sleep_duration);
-    println!("  Tracked params: {}", cfg.params.len());
-    println!("  Exit patterns: {}", cfg.exit.len());
+    println!("  Providers: {}", cfg.providers.len());
+    println!("  Total rules: {rule_count}");
+    println!("  Total redirections: {redirect_count}");
 
     if warnings.is_empty() {
         println!("\nConfig is valid.");
@@ -38,7 +50,7 @@ mod tests {
     fn test_validate_good_config() {
         let tmp = std::env::temp_dir().join("clink_test_validate_good.toml");
         let cfg = ClinkConfig::default();
-        confy::store_path(&tmp, &cfg).unwrap();
+        std::fs::write(&tmp, toml::to_string_pretty(&cfg).unwrap()).unwrap();
 
         let result = execute(&tmp);
         assert!(result.is_ok(), "validate should succeed: {:?}", result);

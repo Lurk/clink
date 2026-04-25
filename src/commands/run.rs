@@ -4,8 +4,16 @@ use crate::runtime;
 use crate::stats;
 use copypasta::{ClipboardContext, ClipboardProvider};
 use std::path::Path;
+#[cfg(unix)]
 use std::sync::atomic::Ordering;
 use std::{thread, time::Duration};
+
+fn validation_log_lines(cfg: &ClinkConfig) -> Vec<String> {
+    cfg.validate()
+        .into_iter()
+        .map(|w| format!("config warning: {w}"))
+        .collect()
+}
 
 fn log(verbose: bool, msg: &str) {
     let stamped = format!(
@@ -16,6 +24,14 @@ fn log(verbose: bool, msg: &str) {
         println!("{stamped}");
     }
     let _ = runtime::append_log(&stamped);
+}
+
+// Decide the next iteration's `previous_clipboard`. On a failed clipboard
+// write the system clipboard still holds the dirty text, so keeping the old
+// previous lets the next tick re-detect it as new and retry. Advancing in
+// that case would silently leave tracking params attached.
+fn advance_previous(cleaned: String, old_previous: String, write_failed: bool) -> String {
+    if write_failed { old_previous } else { cleaned }
 }
 
 fn log_err(msg: &str) {
@@ -46,11 +62,24 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
     let mut cfg: ClinkConfig = load_config(config_path)?;
     cfg.verbose = verbose;
 
+    for w in crate::remote::resolve_patterns(&mut cfg, &runtime::data_dir()) {
+        log_err(&w);
+    }
+
+    if let Err(e) = runtime::write_loaded_config(&cfg) {
+        log_err(&format!("Failed to write loaded config: {e}"));
+    }
+
+    for line in validation_log_lines(&cfg) {
+        log_err(&line);
+    }
+
     if verbose {
         println!("Config ({}):\n {cfg:#?}", config_path.display());
     }
 
     let sleep_duration = Duration::from_millis(cfg.sleep_duration);
+    #[cfg_attr(not(unix), allow(unused_mut))]
     let mut clink = Clink::new(cfg);
     let mut ctx: ClipboardContext =
         ClipboardContext::new().map_err(|e| format!("Failed to access clipboard: {e}"))?;
@@ -66,6 +95,7 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
                 log(verbose, "clink shutting down (SIGTERM)");
                 let _ = stats::save(&statistics, &stats_path);
                 runtime::remove_pid_file();
+                runtime::remove_loaded_config();
                 return Ok(());
             }
 
@@ -79,6 +109,16 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
                 match load_config(config_path) {
                     Ok(mut new_cfg) => {
                         new_cfg.verbose = verbose;
+                        for w in crate::remote::resolve_patterns(&mut new_cfg, &runtime::data_dir())
+                        {
+                            log_err(&w);
+                        }
+                        if let Err(e) = runtime::write_loaded_config(&new_cfg) {
+                            log_err(&format!("Failed to write loaded config: {e}"));
+                        }
+                        for line in validation_log_lines(&new_cfg) {
+                            log_err(&line);
+                        }
                         clink = Clink::new(new_cfg);
                         log(verbose, "Config reloaded successfully");
                     }
@@ -94,6 +134,7 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
                 statistics.check_rollovers();
                 statistics.increment(0, 0, 0, 1);
                 let result = clink.find_and_replace(&current_clipboard);
+                let mut write_failed = false;
                 if result.text != current_clipboard {
                     statistics.increment(
                         result.urls_cleaned,
@@ -103,15 +144,72 @@ pub fn execute(config_path: &Path, verbose: bool) -> Result<(), String> {
                     );
                     if let Err(e) = ctx.set_contents(result.text.clone()) {
                         log_err(&format!("Failed to set clipboard: {e}"));
+                        write_failed = true;
                     }
 
                     if let Err(e) = stats::save(&statistics, &stats_path) {
                         log_err(&format!("Failed to save stats: {e}"));
                     }
                 }
-                previous_clipboard = result.text;
+                previous_clipboard =
+                    advance_previous(result.text, previous_clipboard, write_failed);
             }
         }
         thread::sleep(sleep_duration);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validation_log_lines_flags_zero_sleep_duration() {
+        let cfg = ClinkConfig {
+            sleep_duration: 0,
+            ..ClinkConfig::default()
+        };
+        let lines = validation_log_lines(&cfg);
+        assert!(
+            lines.iter().any(|l| l.contains("sleep_duration")),
+            "sleep_duration=0 must surface as a warning, got {lines:?}"
+        );
+        assert!(
+            lines.iter().all(|l| l.starts_with("config warning:")),
+            "every line must be tagged as a config warning, got {lines:?}"
+        );
+    }
+
+    #[test]
+    fn validation_log_lines_empty_for_default_config() {
+        let lines = validation_log_lines(&ClinkConfig::default());
+        assert!(
+            lines.is_empty(),
+            "default config must not produce warnings, got {lines:?}"
+        );
+    }
+
+    #[test]
+    fn advance_previous_advances_on_successful_write() {
+        let next = advance_previous(
+            "https://test.test/".to_string(),
+            "https://test.test/?fbclid=x".to_string(),
+            false,
+        );
+        assert_eq!(next, "https://test.test/");
+    }
+
+    #[test]
+    fn advance_previous_keeps_old_on_failed_write() {
+        // After a failed clipboard write the user's actual clipboard still has
+        // the dirty text. Keeping the old previous means the next tick sees
+        // the dirty text as "new" and retries — advancing to the cleaned text
+        // would silently abandon the URL with tracking params still attached.
+        let next = advance_previous(
+            "https://test.test/".to_string(),
+            "https://test.test/?fbclid=x".to_string(),
+            true,
+        );
+        assert_eq!(next, "https://test.test/?fbclid=x");
     }
 }
