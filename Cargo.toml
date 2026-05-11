@@ -23,7 +23,7 @@ ureq = "3.3.0"
 regex = "1.12.3"
 
 [target.'cfg(unix)'.dependencies]
-nix = { version = "0.31.2", features = ["signal", "process"] }
+nix = { version = "0.31.3", features = ["signal", "process"] }
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
